@@ -8,6 +8,7 @@ import { Card } from '@/components/card';
 import { ScreenHeader } from '@/components/screen-header';
 import {
   getRouteAvailability,
+  places,
   RESULTS_ORIGINS,
   resultsRoutesByOrigin,
   type ResultsOrigin,
@@ -121,10 +122,8 @@ export default function ResultsScreen() {
 
   const originFromParam = params.origin as ResultsOrigin | undefined;
   const origin = originFromParam ? originFromParam : 'dasmarinas';
-  const destinationFromParam = params.destination as 'cvsu-gate' | 'cvsu-gate-2' | undefined;
-  const destination = destinationFromParam
-    ? destinationFromParam === 'cvsu-gate-2'
-    : 'cvsu-gate';
+  const destinationFromParam = params.destination as string | undefined;
+  const destination = destinationFromParam ? String(destinationFromParam) : 'cvsu-gate';
   const departureAt = Number(params.departureAt);
   const departure = Number.isFinite(departureAt) && departureAt > 0 ? new Date(departureAt) : new Date();
   const period: FarePeriod =

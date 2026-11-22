@@ -435,6 +435,37 @@ const styles = StyleSheet.create({
     color: colors.onTransit,
     fontWeight: type.weight.semibold,
   },
+  destinationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+  },
+  destination: {
+    minHeight: touch.min,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+  },
+  destinationActive: {
+    backgroundColor: colors.transit,
+    borderColor: colors.transit,
+  },
+  destinationText: {
+    color: colors.ink,
+    fontSize: type.size.sm,
+    lineHeight: type.line.sm,
+    fontWeight: type.weight.medium,
+  },
+  destinationTextActive: {
+    color: colors.onTransit,
+    fontWeight: type.weight.semibold,
+  },
   actions: {
     marginHorizontal: spacing.lg,
   },
