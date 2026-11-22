@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "indang-transit",
+    "name": "Indang Transit",
     "slug": "indang-transit",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -28,11 +28,12 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#F7F5EF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
