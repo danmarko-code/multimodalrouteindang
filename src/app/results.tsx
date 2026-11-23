@@ -186,8 +186,28 @@ export default function ResultsScreen() {
           const status = availability[route.id] ?? { available: true };
           const unavailable = !status.available;
           const fare = totalFare(route.legs, passenger, period);
+          const goToDetail = () => {
+            router.push({
+              pathname: '/route-detail',
+              params: {
+                id: route.id,
+                origin,
+                destination,
+                departureAt: String(departure.getTime()),
+                period,
+                passenger,
+              },
+            });
+          };
           return (
-            <Card key={route.id} style={[styles.card, unavailable && styles.cardUnavailable]}>
+            <Pressable
+              key={route.id}
+              onPress={unavailable ? undefined : goToDetail}
+              accessibilityRole="button"
+              accessibilityLabel={unavailable ? undefined : `View ${route.name}`}
+              accessibilityState={{ disabled: unavailable }}
+              style={({ pressed }) => [pressed && styles.pressed]}>
+              <Card style={[styles.card, unavailable && styles.cardUnavailable]}>
               <View style={styles.cardHeader}>
                 <Text style={styles.routeName}>{route.name}</Text>
                 <View style={styles.badges}>
@@ -224,7 +244,8 @@ export default function ResultsScreen() {
 
               {status.reason ? <Text style={styles.reason}>{status.reason}</Text> : null}
             </Card>
-          );
+          </Pressable>
+        );
         })}
       </ScrollView>
     </SafeAreaView>
