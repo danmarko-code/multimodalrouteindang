@@ -1,12 +1,19 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle, G, Line, Text as SvgText } from 'react-native-svg';
 
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { ScreenHeader } from '@/components/screen-header';
-import { resultsRoutesByOrigin, terminals } from '@/data/indang';
+import {
+  getRouteDiagramStops,
+  RESULTS_ORIGINS,
+  resultsRoutesByOrigin,
+  terminals,
+  type RouteDiagramStop,
+} from '@/data/indang';
 import { computeFare, getPeriod, type FareLeg, type FarePeriod, type PassengerType } from '@/data/fares';
 import { colors, spacing, type } from '@/theme';
 
@@ -29,6 +36,69 @@ const MODE_META: Record<Mode, { label: string; color: string }> = {
 
 const FARE_NOTE =
   'Fares follow LTFRB and Indang Ordinance No. 267-S-2023. Actual charges may vary.';
+
+const DIAGRAM_STEP = 52;
+const DIAGRAM_PAD = 22;
+const DIAGRAM_LINE_X = 20;
+const DIAGRAM_LABEL_X = 36;
+
+function RouteDiagram({ stops, modes }: { stops: RouteDiagramStop[]; modes: Mode[] }) {
+  const [width, setWidth] = useState(0);
+  const height = DIAGRAM_PAD * 2 + (stops.length - 1) * DIAGRAM_STEP;
+  const lastMode = modes[modes.length - 1] ?? 'walk';
+
+  return (
+    <Card style={styles.diagramCard}>
+      <View
+        style={styles.diagramWrap}
+        onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
+        {width > 0 ? (
+          <Svg width={width} height={height}>
+            {modes.slice(0, stops.length - 1).map((mode, index) => (
+              <Line
+                key={`segment-${index}`}
+                x1={DIAGRAM_LINE_X}
+                y1={DIAGRAM_PAD + index * DIAGRAM_STEP}
+                x2={DIAGRAM_LINE_X}
+                y2={DIAGRAM_PAD + (index + 1) * DIAGRAM_STEP}
+                stroke={MODE_META[mode].color}
+                strokeWidth={4}
+                strokeLinecap="round"
+                strokeDasharray={mode === 'walk' ? '5 6' : undefined}
+              />
+            ))}
+            {stops.map((stop, index) => {
+              const y = DIAGRAM_PAD + index * DIAGRAM_STEP;
+              const color = MODE_META[modes[index] ?? lastMode].color;
+              const filled = stop.kind === 'start' || stop.kind === 'end';
+              const radius = filled ? 6 : stop.kind === 'transfer' ? 5.5 : 4.5;
+              return (
+                <G key={stop.id}>
+                  <Circle
+                    cx={DIAGRAM_LINE_X}
+                    cy={y}
+                    r={radius}
+                    fill={filled ? color : colors.surface}
+                    stroke={color}
+                    strokeWidth={filled ? 0 : 2.5}
+                  />
+                  <SvgText
+                    x={DIAGRAM_LABEL_X}
+                    y={y + 4}
+                    fontSize={12}
+                    fill={colors.ink}
+                    fontWeight={filled ? '600' : '400'}>
+                    {stop.label}
+                  </SvgText>
+                </G>
+              );
+            })}
+          </Svg>
+        ) : null}
+      </View>
+    </Card>
+  );
+}
 
 const FORMAT_TIME = (minutes: number) =>
   minutes >= 60
@@ -123,6 +193,11 @@ export default function RouteDetailScreen() {
 
   const hasWalking = useMemo(() => travelModes.includes('walk'), [travelModes]);
 
+  const diagramStops = useMemo(
+    () => (route ? getRouteDiagramStops(route.id, RESULTS_ORIGINS[origin]) : []),
+    [route, origin],
+  );
+
   return (
     <SafeAreaView
       style={styles.safe}
@@ -158,8 +233,9 @@ export default function RouteDetailScreen() {
           </Text>
         )}
 
-        {/* --- Empty card for future route diagram --- */}
-        <View style={styles.diagramPlaceholder} />
+        {diagramStops.length > 1 ? (
+          <RouteDiagram stops={diagramStops} modes={travelModes} />
+        ) : null}
 
         {/* --- Timeline --- */}
         <View style={styles.timeline}>
@@ -291,10 +367,11 @@ const styles = StyleSheet.create({
   nightNote: {
     color: colors.muted,
   },
-  diagramPlaceholder: {
-    height: 220,
+  diagramCard: {
+    marginHorizontal: spacing.lg,
+  },
+  diagramWrap: {
     width: '100%',
-    backgroundColor: colors.line,
   },
   timeline: {
     gap: spacing.xs,

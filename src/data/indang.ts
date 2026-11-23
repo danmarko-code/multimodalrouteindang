@@ -214,6 +214,102 @@ export const resultsRoutesByOrigin: Record<ResultsOrigin, ResultsRoute[]> = {
   trece: buildResults(TRECE_TO_CVSU_KM, TRECE_TO_INDANG_POBLACION_KM, 30),
 };
 
+export type RouteDiagramStopKind = 'start' | 'stop' | 'transfer' | 'end';
+
+// Ordered stops for each results route, drawn top to bottom on the route
+// detail diagram. Real coordinates are kept so a GeoJSON path can replace the
+// straight lines later. The start label comes from the chosen origin.
+export type RouteDiagramStop = {
+  id: string;
+  label: string;
+  kind: RouteDiagramStopKind;
+  terminalId?: string;
+  lat?: number;
+  lng?: number;
+};
+
+export const routeDiagramStops: Record<string, RouteDiagramStop[]> = {
+  'direct-jeepney': [
+    { id: 'start', label: '', kind: 'start' },
+    {
+      id: 'cvsu-terminal',
+      label: 'CvSU Terminal',
+      kind: 'stop',
+      terminalId: 't-cvsu',
+      lat: 14.1936,
+      lng: 120.8794,
+    },
+    {
+      id: 'cvsu-gate',
+      label: 'CvSU Main Gate',
+      kind: 'end',
+      terminalId: 't-cvsu',
+      lat: 14.1936,
+      lng: 120.8794,
+    },
+  ],
+  'poblacion-tricycle': [
+    { id: 'start', label: '', kind: 'start' },
+    {
+      id: 'poblacion',
+      label: 'Poblacion Terminal',
+      kind: 'transfer',
+      terminalId: 't-poblacion',
+      lat: 14.1919,
+      lng: 120.8778,
+    },
+    {
+      id: 'cvsu-campus',
+      label: 'CvSU Campus',
+      kind: 'stop',
+      terminalId: 't-cvsu',
+      lat: 14.1936,
+      lng: 120.8794,
+    },
+    {
+      id: 'cvsu-gate',
+      label: 'CvSU Main Gate',
+      kind: 'end',
+      terminalId: 't-cvsu',
+      lat: 14.1936,
+      lng: 120.8794,
+    },
+  ],
+  'cvsu-terminal': [
+    { id: 'start', label: '', kind: 'start' },
+    {
+      id: 'poblacion',
+      label: 'Poblacion Terminal',
+      kind: 'transfer',
+      terminalId: 't-poblacion',
+      lat: 14.1919,
+      lng: 120.8778,
+    },
+    {
+      id: 'cvsu-terminal',
+      label: 'CvSU Terminal',
+      kind: 'stop',
+      terminalId: 't-cvsu',
+      lat: 14.1936,
+      lng: 120.8794,
+    },
+    {
+      id: 'cvsu-gate',
+      label: 'CvSU Main Gate',
+      kind: 'end',
+      terminalId: 't-cvsu',
+      lat: 14.1936,
+      lng: 120.8794,
+    },
+  ],
+};
+
+export function getRouteDiagramStops(routeId: string, startLabel: string): RouteDiagramStop[] {
+  return (routeDiagramStops[routeId] ?? []).map((stop) =>
+    stop.kind === 'start' ? { ...stop, label: startLabel } : stop,
+  );
+}
+
 export type RouteAvailability = { available: boolean; reason?: string };
 
 const minutesOf = (clock: string) => {
