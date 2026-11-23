@@ -25,7 +25,9 @@ export function Badge({ label, tone = 'muted' }: BadgeProps) {
           ? { backgroundColor: solidTones[tone] }
           : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
       ]}>
-      <Text style={[styles.label, { color: solid ? colors.onTransit : colors.muted }]}>
+      <Text
+        numberOfLines={1}
+        style={[styles.label, { color: solid ? colors.onTransit : colors.muted }]}>
         {label}
       </Text>
     </View>
@@ -35,11 +37,13 @@ export function Badge({ label, tone = 'muted' }: BadgeProps) {
 const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
+    flexShrink: 0,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.sm,
   },
   label: {
+    flexShrink: 0,
     fontSize: type.size.xs,
     lineHeight: type.line.xs,
     fontWeight: type.weight.semibold,

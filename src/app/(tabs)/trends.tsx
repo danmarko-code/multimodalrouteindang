@@ -24,10 +24,10 @@ const CROWD_OF: Record<QueueLevel, Crowd> = {
   '16+': 'heavy',
 };
 
-const CROWD_META: Record<Crowd, { label: string; color: string }> = {
-  light: { label: 'Light', color: colors.transit },
-  moderate: { label: 'Moderate', color: colors.fare },
-  heavy: { label: 'Heavy', color: HEAVY_COLOR },
+const CROWD_META: Record<Crowd, { label: string; color: string; fill: number }> = {
+  light: { label: 'Light', color: colors.transit, fill: 0.25 },
+  moderate: { label: 'Moderate', color: colors.fare, fill: 0.6 },
+  heavy: { label: 'Heavy', color: HEAVY_COLOR, fill: 0.9 },
 };
 
 const FILTERS: { value: Filter; label: string }[] = [
@@ -99,7 +99,7 @@ function LeastCrowdedCard({ row }: { row: Row }) {
 function RankedRow({ row, rank }: { row: Row; rank: number }) {
   const { terminal, status, open } = row;
   const meta = CROWD_META[CROWD_OF[status.queueLevel]];
-  const fill = QUEUE_LEVELS.indexOf(status.queueLevel) / (QUEUE_LEVELS.length - 1);
+  const fill = meta.fill;
 
   return (
     <Pressable
@@ -110,7 +110,7 @@ function RankedRow({ row, rank }: { row: Row; rank: number }) {
       <View style={styles.rowTop}>
         <Text style={styles.rank}>{String(rank)}</Text>
         <View style={styles.rowNameWrap}>
-          <Text style={styles.rowName} numberOfLines={1}>
+          <Text style={styles.rowName} numberOfLines={2}>
             {displayName(terminal.name)}
           </Text>
           <Badge
