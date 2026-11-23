@@ -3,10 +3,12 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G, Line, Text as SvgText } from 'react-native-svg';
 
+import { MODE_SVG } from '../assets/svg';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
+import { SvgAsset } from '@/components/svg-asset';
 import {
   getRouteDiagramStops,
   RESULTS_ORIGINS,
@@ -264,11 +266,7 @@ export default function RouteDetailScreen() {
                   mode === 'walk' && styles.walkRow,
                 ]}>
                 <View style={styles.dotContainer}>
-                  <View
-                    style={[
-                      styles.timelineDot,
-                      { backgroundColor: modeMeta.color },
-                    ]} />
+                  <SvgAsset xml={MODE_SVG[mode]} size={16} color={modeMeta.color} />
                 </View>
                 <View style={styles.legContent}>
                   <View style={styles.modeAndDuration}>
@@ -380,13 +378,8 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   dotContainer: {
-    width: 8,
+    width: 16,
     flex: 0,
-  },
-  timelineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
   walkRow: {
     alignSelf: 'center',

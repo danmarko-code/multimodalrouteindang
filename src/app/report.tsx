@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { MODE_SVG } from '../assets/svg';
 import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
@@ -138,6 +139,7 @@ export default function ReportScreen() {
             <Badge
               label={modeLabel(terminal)}
               tone={terminal.mode === 'jeepney' ? 'route' : 'fare'}
+              icon={MODE_SVG[terminal.mode]}
             />
           </View>
         </View>

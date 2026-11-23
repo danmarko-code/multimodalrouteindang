@@ -2,10 +2,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { MODE_SVG } from '../assets/svg';
 import { Badge } from '@/components/badge';
 import { Card } from '@/components/card';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
+import { SvgAsset } from '@/components/svg-asset';
 import {
   getRouteAvailability,
   places,
@@ -232,7 +234,7 @@ export default function ResultsScreen() {
                   const legFare = computeFare(leg, { passenger, period });
                   return (
                     <View key={`${route.id}-${index}`} style={styles.mode}>
-                      <View style={[styles.modeDot, { backgroundColor: meta.color }]} />
+                      <SvgAsset xml={MODE_SVG[leg.mode]} size={14} color={meta.color} />
                       <Text style={styles.modeText}>
                         {meta.label} {leg.durationMin}m · {leg.mode === 'walk' ? 'Free' : formatFare(legFare)}
                       </Text>

@@ -10,10 +10,12 @@ import {
   View,
 } from 'react-native';
 
+import { logoHorizontalSvg } from '../../assets/svg';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
+import { SvgAsset } from '@/components/svg-asset';
 import { PUJ_CONFIG, TRICYCLE_CONFIG, type PassengerType } from '@/data/fares';
 import { colors, radii, spacing, touch, type } from '@/theme';
 
@@ -201,6 +203,9 @@ export default function MoreScreen() {
           </Card>
 
           <Card style={styles.group}>
+            <View style={styles.logoWrap}>
+              <SvgAsset xml={logoHorizontalSvg} width={180} height={33} />
+            </View>
             <Text style={styles.sectionTitle}>About</Text>
             <View style={styles.row}>
               <Text style={styles.appName}>Indang Transit</Text>
@@ -262,6 +267,9 @@ const styles = StyleSheet.create({
   },
   group: {
     gap: spacing.sm,
+  },
+  logoWrap: {
+    alignItems: 'center',
   },
   sectionTitle: {
     color: colors.muted,

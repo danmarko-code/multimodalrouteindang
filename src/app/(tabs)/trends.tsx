@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { MODE_SVG } from '../../assets/svg';
 import { Badge } from '@/components/badge';
 import { Card } from '@/components/card';
 import { Screen } from '@/components/screen';
@@ -83,7 +84,7 @@ function LeastCrowdedCard({ row }: { row: Row }) {
       <View style={styles.topNameRow}>
         <Text style={styles.topName}>{displayName(terminal.name)}</Text>
         <View style={styles.topChip}>
-          <Badge label={modeLabel(terminal)} tone="muted" />
+          <Badge label={modeLabel(terminal)} tone="muted" icon={MODE_SVG[terminal.mode]} />
         </View>
       </View>
       <Text style={[styles.topWait, status.isStale && styles.dimmed]}>
@@ -116,6 +117,7 @@ function RankedRow({ row, rank }: { row: Row; rank: number }) {
           <Badge
             label={modeLabel(terminal)}
             tone={terminal.mode === 'jeepney' ? 'route' : 'fare'}
+            icon={MODE_SVG[terminal.mode]}
           />
         </View>
         <Badge label={open ? 'Open' : 'Closed'} tone={open ? 'transit' : 'muted'} />

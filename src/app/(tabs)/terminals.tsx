@@ -3,11 +3,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
 
+import { MODE_SVG, iconTerminalPinSvg } from '../../assets/svg';
 import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
+import { SvgAsset } from '@/components/svg-asset';
 import { formatClock, terminals, type Terminal } from '@/data/indang';
 import { useLive, type QueueLevel } from '@/data/live';
 import { colors, radii, spacing, touch, type } from '@/theme';
@@ -116,11 +118,13 @@ function TerminalCard({ terminal, open }: { terminal: Terminal; open: boolean })
   return (
     <Card style={!open && styles.cardClosed}>
       <View style={styles.cardTop}>
+        <SvgAsset xml={iconTerminalPinSvg} size={18} color={colors.transit} />
         <Text style={styles.terminalName}>{displayName(terminal.name)}</Text>
         <View style={styles.modeChip}>
           <Badge
             label={terminal.mode === 'jeepney' ? 'Jeepney' : 'Tricycle'}
             tone={terminal.mode === 'jeepney' ? 'route' : 'fare'}
+            icon={MODE_SVG[terminal.mode]}
           />
         </View>
       </View>
