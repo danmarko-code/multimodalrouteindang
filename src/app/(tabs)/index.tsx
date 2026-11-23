@@ -3,14 +3,14 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { ScreenHeader } from '@/components/screen-header';
 import { getPeriod } from '@/data/fares';
 import { colors, radii, spacing, touch, type } from '@/theme';
 
-const STARTING_POINTS = ['Dasmariñas', 'Trece Martires'] as const;
+const ORIGINS = ['Dasmariñas', 'Trece Martires', 'Current location'] as const;
 const DESTINATIONS = ['CvSU Main Gate', 'CvSU Gate 2'] as const;
 const CHIP_MINUTES = 5;
 
@@ -48,7 +48,8 @@ export default function SearchScreen() {
   const [destination, setDestination] = useState<string>('CvSU Main Gate');
   const [departure, setDeparture] = useState<'now' | 'at'>('now');
   const [departTime, setDepartTime] = useState(() => roundUpToFive(new Date()));
-  const [toOpen, setToOpen] = useState(false); // New state for dropdown
+  const [fromOpen, setFromOpen] = useState(false);
+  const [toOpen, setToOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const openPicker = () => setPickerOpen(true);
@@ -60,6 +61,42 @@ export default function SearchScreen() {
 
   const applyChip = (chip: (typeof TIME_CHIPS)[number]) => {
     setDepartTime((current) => chip.apply(current));
+  };
+
+  const openFrom = () => {
+    setFromOpen(true);
+    setToOpen(false);
+  };
+
+  const openTo = () => {
+    setToOpen(true);
+    setFromOpen(false);
+  };
+
+  const toggleFrom = () => {
+    if (fromOpen) {
+      setFromOpen(false);
+    } else {
+      openFrom();
+    }
+  };
+
+  const toggleTo = () => {
+    if (toOpen) {
+      setToOpen(false);
+    } else {
+      openTo();
+    }
+  };
+
+  const selectOrigin = (place: string) => {
+    setOrigin(place);
+    setFromOpen(false);
+  };
+
+  const selectDestination = (place: string) => {
+    setDestination(place);
+    setToOpen(false);
   };
 
   const findRoutes = () => {
@@ -84,78 +121,75 @@ export default function SearchScreen() {
       <ScreenHeader title="Search" />
 
       <Card style={styles.card}>
-        <Text style={[styles.label, styles.labelSpaced]}>From</Text>
-        <TextInput
-          value={origin}
-          onChangeText={setOrigin}
-          placeholder="Choose a starting point"
-          placeholderTextColor={colors.muted}
-          style={styles.input}
-          accessibilityLabel="Origin"
-          autoCapitalize="words"
-          returnKeyType="done"
-        />
-
-        <Pressable
-          onPress={() => setOrigin('Current location')}
-          accessibilityRole="button"
-          accessibilityLabel="Use current location as origin"
-          style={({ pressed }) => [styles.location, pressed && styles.pressed]}>
-          <Text style={styles.locationGlyph}>◎</Text>
-          <Text style={styles.locationText}>Use current location</Text>
-        </Pressable>
+        <Text style={styles.label}>From</Text>
+        <View style={styles.selectContainer}>
+          <Pressable
+            onPress={toggleFrom}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: fromOpen }}
+            accessibilityLabel={`Origin, ${origin}. Change origin`}
+            style={({ pressed }) => [styles.input, styles.selectField, pressed && styles.pressed]}>
+            <Text style={styles.selectValue}>{origin}</Text>
+            <Text style={styles.selectGlyph}>{fromOpen ? '▸' : '▾'}</Text>
+          </Pressable>
+          {fromOpen && (
+            <View style={styles.menu}>
+              {ORIGINS.map((place) => {
+                const active = origin === place;
+                return (
+                  <Pressable
+                    key={place}
+                    onPress={() => selectOrigin(place)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    style={[styles.menuItem, active && styles.menuItemSelected]}>
+                    <View style={styles.menuItemRow}>
+                      <Text style={[styles.menuText, active && styles.menuTextSelected]}>{place}</Text>
+                      {active && <Text style={styles.checkIcon}>✓</Text>}
+                    </View>
+                    {place === 'Current location' && !active && (
+                      <Text style={styles.locationIcon}>◎</Text>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </View>
 
         <Text style={[styles.label, styles.labelSpaced]}>To</Text>
         <View style={styles.selectContainer}>
           <Pressable
-            onPress={() => setToOpen((open) => !open)}
+            onPress={toggleTo}
             accessibilityRole="button"
             accessibilityState={{ expanded: toOpen }}
             accessibilityLabel={`Destination, ${destination}. Change destination`}
             style={({ pressed }) => [styles.input, styles.selectField, pressed && styles.pressed]}>
             <Text style={styles.selectValue}>{destination}</Text>
-            <Text style={styles.selectGlyph}>▾</Text>
+            <Text style={styles.selectGlyph}>{toOpen ? '▸' : '▾'}</Text>
           </Pressable>
-          {toOpen ? (
+          {toOpen && (
             <View style={styles.menu}>
               {DESTINATIONS.map((place) => {
                 const active = destination === place;
                 return (
                   <Pressable
                     key={place}
-                    onPress={() => { setDestination(place); setToOpen(false); }}
+                    onPress={() => selectDestination(place)}
                     accessibilityRole="button"
                     accessibilityState={{ selected: active }}
-                    style={[styles.menuItem, active && styles.chipActive]}>
-                    <Text style={[styles.menuText, active && styles.chipTextActive]}>{place}</Text>
+                    style={[styles.menuItem, active && styles.menuItemSelected]}>
+                    <View style={styles.menuItemRow}>
+                      <Text style={[styles.menuText, active && styles.menuTextSelected]}>{place}</Text>
+                      {active && <Text style={styles.checkIcon}>✓</Text>}
+                    </View>
                   </Pressable>
                 );
               })}
             </View>
-          ) : null}
+          )}
         </View>
       </Card>
-
-      <Text style={styles.sectionLabel}>Starting point</Text>
-      <View style={styles.chips}>
-        {STARTING_POINTS.map((place) => {
-          const active = origin === place;
-          return (
-            <Pressable
-              key={place}
-              onPress={() => setOrigin(place)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              style={({ pressed }) => [
-                styles.chip,
-                active && styles.chipActive,
-                pressed && styles.pressed,
-              ]}>
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>{place}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
 
       <Card style={styles.card}>
         <Text style={styles.label}>Departure</Text>
@@ -255,13 +289,6 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: spacing.lg,
   },
-  tripRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  fields: {
-    flex: 1,
-  },
   label: {
     color: colors.muted,
     fontSize: type.size.xs,
@@ -338,40 +365,8 @@ const styles = StyleSheet.create({
     fontSize: type.size.xs,
     lineHeight: type.line.xs,
   },
-  swap: {
-    width: touch.min,
-    height: touch.min,
-    marginLeft: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radii.sm,
-    backgroundColor: colors.paper,
-  },
-  swapGlyph: {
-    color: colors.transit,
-    fontSize: type.size.lg,
-    lineHeight: type.line.lg,
-  },
   pressed: {
     opacity: 0.7,
-  },
-  location: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: touch.min,
-    marginTop: spacing.sm,
-  },
-  locationGlyph: {
-    color: colors.transit,
-    fontSize: type.size.md,
-  },
-  locationText: {
-    color: colors.transit,
-    fontSize: type.size.sm,
-    fontWeight: type.weight.semibold,
   },
   segment: {
     flexDirection: 'row',
@@ -401,80 +396,10 @@ const styles = StyleSheet.create({
     color: colors.onTransit,
     fontWeight: type.weight.semibold,
   },
-  sectionLabel: {
-    marginHorizontal: spacing.lg,
-    color: colors.ink,
-    fontSize: type.size.sm,
-    fontWeight: type.weight.semibold,
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginHorizontal: spacing.lg,
-  },
-  chip: {
-    minHeight: touch.min,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-  },
-  chipActive: {
-    backgroundColor: colors.transit,
-    borderColor: colors.transit,
-  },
-  chipText: {
-    color: colors.ink,
-    fontSize: type.size.sm,
-    lineHeight: type.line.sm,
-    fontWeight: type.weight.medium,
-  },
-  chipTextActive: {
-    color: colors.onTransit,
-    fontWeight: type.weight.semibold,
-  },
-  destinationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.md,
-  },
-  destination: {
-    minHeight: touch.min,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surface,
-  },
-  destinationActive: {
-    backgroundColor: colors.transit,
-    borderColor: colors.transit,
-  },
-  destinationText: {
-    color: colors.ink,
-    fontSize: type.size.sm,
-    lineHeight: type.line.sm,
-    fontWeight: type.weight.medium,
-  },
-  destinationTextActive: {
-    color: colors.onTransit,
-    fontWeight: type.weight.semibold,
-  },
   actions: {
     marginHorizontal: spacing.lg,
   },
-  selectContainer: {
-    position: 'relative',
-  },
+  selectContainer: {},
   selectField: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -484,30 +409,53 @@ const styles = StyleSheet.create({
   selectValue: {
     color: colors.ink,
     fontSize: type.size.md,
+    flex: 1,
   },
   selectGlyph: {
     color: colors.muted,
     fontSize: type.size.md,
   },
   menu: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
     marginTop: spacing.xs,
     borderWidth: 1,
     borderColor: colors.line,
     borderRadius: radii.sm,
     backgroundColor: colors.paper,
+    overflow: 'hidden',
   },
   menuItem: {
     minHeight: 44,
     paddingHorizontal: spacing.md,
     justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+  },
+  menuItemRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  menuItemSelected: {
+    backgroundColor: 'rgba(34, 197, 94, 0.12)',
   },
   menuText: {
     color: colors.ink,
-    fontSize: type.size.sm,
+    fontSize: type.size.md,
+    flex: 1,
+  },
+  menuTextSelected: {
+    color: '#15803d',
+    fontWeight: type.weight.semibold,
+  },
+  checkIcon: {
+    color: '#15803d',
+    fontSize: type.size.md,
+    fontWeight: 'bold',
+  },
+  locationIcon: {
+    color: colors.transit,
+    fontSize: type.size.md,
+    marginLeft: spacing.sm,
   },
 });
