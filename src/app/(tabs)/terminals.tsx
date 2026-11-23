@@ -1,9 +1,11 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, G, SvgXml, Text as SvgText } from 'react-native-svg';
 
-import { MODE_SVG, iconTerminalPinSvg } from '../../assets/svg';
+import mapAnchors from '@/assets/files/map-anchors.json';
+
+import { MODE_SVG, iconTerminalPinSvg, indangMapSvg } from '../../assets/svg';
 import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
@@ -34,10 +36,21 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'open', label: 'Open now' },
 ];
 
-const MAP_HEIGHT = 300;
-const MAP_PAD = 28;
-const LABEL_HEIGHT = 12;
-const LABEL_CHAR = 5.6;
+const [MAP_WIDTH, MAP_HEIGHT] = mapAnchors.viewBox;
+const PIN_RADIUS = 18;
+const TAP_RADIUS = 48;
+const LABEL_HEIGHT = 30;
+const LABEL_CHAR = 11.5;
+const LABEL_FONT = 22;
+
+const ANCHOR_KEYS: Record<string, keyof typeof mapAnchors.terminals> = {
+  'Poblacion Terminal': 'indang-bayan',
+  'Municipal Hall Stop': 'municipal-hall',
+  'CvSU Terminal': 'cvsu',
+  'Bancod Terminal': 'bancod',
+  'Kaytapos Terminal': 'kaytapos',
+  'Alulod Terminal': 'alulod',
+};
 
 const minutesOf = (clock: string) => {
   const [hours, minutes] = clock.split(':').map(Number);
@@ -169,50 +182,49 @@ type PlacedLabel = { id: string; text: string; x: number; y: number };
 const overlaps = (a: Box, b: Box) =>
   a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
-function layoutPins(width: number): Pin[] {
-  const lats = terminals.map((terminal) => terminal.lat);
-  const lngs = terminals.map((terminal) => terminal.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const latSpan = Math.max(maxLat - minLat, 0.0001);
-  const lngSpan = Math.max(maxLng - minLng, 0.0001);
-  const scale = Math.min(
-    (width - MAP_PAD * 2) / lngSpan,
-    (MAP_HEIGHT - MAP_PAD * 2) / latSpan,
-  );
-  const offsetX = (width - lngSpan * scale) / 2;
-  const offsetY = (MAP_HEIGHT - latSpan * scale) / 2;
-  return terminals.map((terminal) => ({
-    terminal,
-    x: offsetX + (terminal.lng - minLng) * scale,
-    y: offsetY + (maxLat - terminal.lat) * scale,
-  }));
+function buildPins(): Pin[] {
+  return terminals.flatMap((terminal) => {
+    const key = ANCHOR_KEYS[terminal.name];
+    if (!key) return [];
+    const [x, y] = mapAnchors.terminals[key];
+    return [{ terminal, x, y }];
+  });
 }
 
-function placeLabels(pins: Pin[], width: number): PlacedLabel[] {
+function placeLabels(pins: Pin[]): PlacedLabel[] {
   const placed: Box[] = [];
-  const pinBoxes: Box[] = pins.map((pin) => ({ x: pin.x - 9, y: pin.y - 9, w: 18, h: 18 }));
+  const pinBoxes: Box[] = pins.map((pin) => ({
+    x: pin.x - TAP_RADIUS / 2,
+    y: pin.y - TAP_RADIUS / 2,
+    w: TAP_RADIUS,
+    h: TAP_RADIUS,
+  }));
+
   return pins.map((pin) => {
     const text = shortName(pin.terminal.name);
-    const w = text.length * LABEL_CHAR + 4;
+    const w = text.length * LABEL_CHAR + 14;
+    const dx = PIN_RADIUS + 10;
+    const dy = PIN_RADIUS + 10;
     const candidates: Box[] = [
-      { x: pin.x + 10, y: pin.y - LABEL_HEIGHT / 2, w, h: LABEL_HEIGHT },
-      { x: pin.x - 10 - w, y: pin.y - LABEL_HEIGHT / 2, w, h: LABEL_HEIGHT },
-      { x: pin.x - w / 2, y: pin.y - 26, w, h: LABEL_HEIGHT },
-      { x: pin.x - w / 2, y: pin.y + 14, w, h: LABEL_HEIGHT },
+      { x: pin.x + dx, y: pin.y - LABEL_HEIGHT / 2, w, h: LABEL_HEIGHT },
+      { x: pin.x - dx - w, y: pin.y - LABEL_HEIGHT / 2, w, h: LABEL_HEIGHT },
+      { x: pin.x - w / 2, y: pin.y - dy - LABEL_HEIGHT, w, h: LABEL_HEIGHT },
+      { x: pin.x - w / 2, y: pin.y + dy, w, h: LABEL_HEIGHT },
+      { x: pin.x + dx, y: pin.y - dy - LABEL_HEIGHT, w, h: LABEL_HEIGHT },
+      { x: pin.x + dx, y: pin.y + dy, w, h: LABEL_HEIGHT },
+      { x: pin.x - dx - w, y: pin.y - dy - LABEL_HEIGHT, w, h: LABEL_HEIGHT },
+      { x: pin.x - dx - w, y: pin.y + dy, w, h: LABEL_HEIGHT },
     ];
     const fits = (box: Box) =>
-      box.x >= 2 &&
-      box.x + box.w <= width - 2 &&
-      box.y >= 0 &&
-      box.y + box.h <= MAP_HEIGHT &&
+      box.x >= 8 &&
+      box.x + box.w <= MAP_WIDTH - 8 &&
+      box.y >= 8 &&
+      box.y + box.h <= MAP_HEIGHT - 8 &&
       !placed.some((other) => overlaps(box, other)) &&
       !pinBoxes.some((other) => overlaps(box, other));
     const chosen = candidates.find(fits) ?? candidates[0];
     placed.push(chosen);
-    return { id: pin.terminal.id, text, x: chosen.x, y: chosen.y };
+    return { id: pin.terminal.id, text, x: chosen.x, y: chosen.y + LABEL_FONT };
   });
 }
 
@@ -226,9 +238,10 @@ function TerminalMap({
   onSelect: (id: string) => void;
 }) {
   const [width, setWidth] = useState(0);
+  const height = width > 0 ? (width * MAP_HEIGHT) / MAP_WIDTH : 0;
   const { getTerminalStatus } = useLive();
-  const pins = useMemo(() => (width > 0 ? layoutPins(width) : []), [width]);
-  const labels = useMemo(() => (width > 0 ? placeLabels(pins, width) : []), [pins, width]);
+  const pins = useMemo(() => buildPins(), []);
+  const labels = useMemo(() => placeLabels(pins), [pins]);
 
   return (
     <Card>
@@ -236,52 +249,60 @@ function TerminalMap({
         style={styles.mapWrap}
         onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
         {width > 0 ? (
-          <Svg width={width} height={MAP_HEIGHT}>
-            {labels.map((label) => (
-              <SvgText
-                key={label.id}
-                x={label.x}
-                y={label.y + 9}
-                fontSize={10}
-                fontWeight="500"
-                fill={colors.ink}>
-                {label.text}
-              </SvgText>
-            ))}
-            {pins.map((pin) => {
-              const open = isOpen(pin.terminal, now);
-              const status = getTerminalStatus(pin.terminal.id);
-              const color =
-                !open || status?.isStale
-                  ? colors.muted
-                  : CONGESTION_META[
-                      congestionOfQueue(status?.queueLevel ?? 'none')
-                    ].color;
-              const selected = pin.terminal.id === selectedId;
-              return (
-                <G key={pin.terminal.id}>
-                  <Circle
-                    cx={pin.x}
-                    cy={pin.y}
-                    r={22}
-                    fill="transparent"
-                    onPress={() => onSelect(pin.terminal.id)}
-                  />
-                  {selected ? (
-                    <Circle cx={pin.x} cy={pin.y} r={12} fill={color} fillOpacity={0.25} />
-                  ) : null}
-                  <Circle
-                    cx={pin.x}
-                    cy={pin.y}
-                    r={selected ? 8 : 7}
-                    fill={color}
-                    stroke={colors.surface}
-                    strokeWidth={2}
-                  />
-                </G>
-              );
-            })}
-          </Svg>
+          <View style={{ width, height }}>
+            <SvgXml xml={indangMapSvg} width={width} height={height} />
+            <Svg
+              style={styles.mapOverlay}
+              width={width}
+              height={height}
+              viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
+              preserveAspectRatio="xMidYMid slice">
+              {labels.map((label) => (
+                <SvgText
+                  key={label.id}
+                  x={label.x}
+                  y={label.y}
+                  fontSize={LABEL_FONT}
+                  fontWeight="500"
+                  fill={colors.ink}>
+                  {label.text}
+                </SvgText>
+              ))}
+              {pins.map((pin) => {
+                const open = isOpen(pin.terminal, now);
+                const status = getTerminalStatus(pin.terminal.id);
+                const color =
+                  !open || status?.isStale
+                    ? colors.muted
+                    : CONGESTION_META[
+                        congestionOfQueue(status?.queueLevel ?? 'none')
+                      ].color;
+                const selected = pin.terminal.id === selectedId;
+                return (
+                  <G key={pin.terminal.id}>
+                    <Circle
+                      cx={pin.x}
+                      cy={pin.y}
+                      r={TAP_RADIUS}
+                      fill="transparent"
+                      onPress={() => onSelect(pin.terminal.id)}
+                    />
+                    {selected ? (
+                      <Circle cx={pin.x} cy={pin.y} r={30} fill={color} fillOpacity={0.25} />
+                    ) : null}
+                    <Circle
+                      cx={pin.x}
+                      cy={pin.y}
+                      r={selected ? PIN_RADIUS + 4 : PIN_RADIUS}
+                      fill={color}
+                      stroke={colors.surface}
+                      strokeWidth={4}
+                    />
+                  </G>
+                );
+              })}
+            </Svg>
+          </View>
         ) : null}
       </View>
     </Card>
@@ -494,6 +515,11 @@ const styles = StyleSheet.create({
   },
   mapWrap: {
     width: '100%',
+  },
+  mapOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
   empty: {
     color: colors.muted,
