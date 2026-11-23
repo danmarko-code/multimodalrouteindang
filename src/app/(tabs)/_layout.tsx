@@ -4,14 +4,22 @@ import { Tabs, TabList, TabSlot, TabTrigger, type TabTriggerSlotProps } from 'ex
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import {
+  tabFaresSvg,
+  tabMoreSvg,
+  tabSearchSvg,
+  tabTerminalsSvg,
+  tabTrendsSvg,
+} from '../../assets/svg';
+import { SvgAsset } from '@/components/svg-asset';
 import { colors, spacing, touch, type } from '@/theme';
 
 const tabs = [
-  { name: 'search', href: '/', label: 'Search' },
-  { name: 'terminals', href: '/terminals', label: 'Terminals' },
-  { name: 'fares', href: '/fares', label: 'Fares' },
-  { name: 'trends', href: '/trends', label: 'Trends' },
-  { name: 'more', href: '/more', label: 'More' },
+  { name: 'search', href: '/', label: 'Search', icon: tabSearchSvg },
+  { name: 'terminals', href: '/terminals', label: 'Terminals', icon: tabTerminalsSvg },
+  { name: 'fares', href: '/fares', label: 'Fares', icon: tabFaresSvg },
+  { name: 'trends', href: '/trends', label: 'Trends', icon: tabTrendsSvg },
+  { name: 'more', href: '/more', label: 'More', icon: tabMoreSvg },
 ] as const;
 
 export default function RootLayout() {
@@ -23,7 +31,7 @@ export default function RootLayout() {
           <View style={styles.tabBar}>
             {tabs.map((tab) => (
               <TabTrigger key={tab.name} name={tab.name} href={tab.href} asChild>
-                <TabItem label={tab.label} />
+                <TabItem label={tab.label} icon={tab.icon} />
               </TabTrigger>
             ))}
           </View>
@@ -33,12 +41,13 @@ export default function RootLayout() {
   );
 }
 
-type TabItemProps = Omit<TabTriggerSlotProps, 'ref'> & { label: string };
+type TabItemProps = Omit<TabTriggerSlotProps, 'ref'> & { label: string; icon: string };
 
 const TabItem = forwardRef<ComponentRef<typeof Pressable>, TabItemProps>(function TabItem(
-  { label, isFocused, ...props },
+  { label, icon, isFocused, ...props },
   ref,
 ) {
+  const tint = isFocused ? colors.transit : colors.muted;
   return (
     <Pressable
       ref={ref}
@@ -48,7 +57,10 @@ const TabItem = forwardRef<ComponentRef<typeof Pressable>, TabItemProps>(functio
       accessibilityState={{ selected: isFocused }}
       style={({ pressed }) => [styles.tabItem, pressed && styles.pressed]}>
       <View style={[styles.marker, isFocused && styles.markerActive]} />
-      <Text style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>{label}</Text>
+      <SvgAsset xml={icon} size={24} color={tint} />
+      <Text numberOfLines={1} style={[styles.tabLabel, isFocused && styles.tabLabelActive]}>
+        {label}
+      </Text>
     </Pressable>
   );
 });
@@ -70,11 +82,12 @@ const styles = StyleSheet.create({
   },
   tabItem: {
     flex: 1,
+    minWidth: 0,
     minHeight: touch.min,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
+    gap: 2,
+    paddingVertical: spacing.xs,
   },
   pressed: {
     opacity: 0.7,
@@ -95,7 +108,7 @@ const styles = StyleSheet.create({
     fontWeight: type.weight.medium,
   },
   tabLabelActive: {
-    color: colors.ink,
+    color: colors.transit,
     fontWeight: type.weight.semibold,
   },
 });
