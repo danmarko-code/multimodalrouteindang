@@ -1,11 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G, Line, Text as SvgText } from 'react-native-svg';
 
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
+import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import {
   getRouteDiagramStops,
@@ -48,7 +48,7 @@ function RouteDiagram({ stops, modes }: { stops: RouteDiagramStop[]; modes: Mode
   const lastMode = modes[modes.length - 1] ?? 'walk';
 
   return (
-    <Card style={styles.diagramCard}>
+    <Card>
       <View
         style={styles.diagramWrap}
         onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
@@ -204,13 +204,10 @@ export default function RouteDetailScreen() {
   );
 
   return (
-    <SafeAreaView
-      style={styles.safe}
-      edges={['top', 'bottom', 'left', 'right']}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled">
+    <Screen
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled">
         <ScreenHeader
           title={`${origin === 'dasmarinas' ? 'Dasmariñas' : 'Trece Martires'} → ${route?.name ?? ''}`}
           subtitle=""
@@ -331,18 +328,12 @@ export default function RouteDetailScreen() {
             }
           }}
         />
-      </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.paper,
-  },
   content: {
-    paddingBottom: spacing.xxl,
     gap: spacing.lg,
   },
   metric: {
@@ -363,28 +354,22 @@ const styles = StyleSheet.create({
   summary: {
     flexDirection: 'row',
     gap: spacing.md,
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
   periodNote: {
     color: colors.muted,
     fontSize: type.size.xs,
     lineHeight: type.line.xs,
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.xs,
   },
   nightNote: {
     color: colors.muted,
-  },
-  diagramCard: {
-    marginHorizontal: spacing.lg,
   },
   diagramWrap: {
     width: '100%',
   },
   timeline: {
     gap: spacing.xs,
-    marginHorizontal: spacing.lg,
   },
   timelineRow: {
     flexDirection: 'row',
@@ -445,7 +430,6 @@ const styles = StyleSheet.create({
     flex: 0,
   },
   fareCard: {
-    marginHorizontal: spacing.lg,
     marginTop: spacing.md,
     marginBottom: spacing.xl,
   },
@@ -508,6 +492,5 @@ const styles = StyleSheet.create({
     fontSize: type.size.xs,
     lineHeight: type.line.xs,
     marginTop: spacing.xs,
-    marginHorizontal: spacing.lg,
   },
 });

@@ -1,10 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/components/badge';
 import { Card } from '@/components/card';
+import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import {
   getRouteAvailability,
@@ -144,8 +144,7 @@ export default function ResultsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <Screen contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Pressable
           onPress={goBack}
           accessibilityRole="button"
@@ -247,18 +246,12 @@ export default function ResultsScreen() {
           </Pressable>
         );
         })}
-      </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.paper,
-  },
   content: {
-    paddingBottom: spacing.xxl,
     gap: spacing.lg,
   },
   back: {
@@ -277,7 +270,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   toggleWrap: {
-    marginHorizontal: spacing.lg,
     gap: spacing.xs,
   },
   toggleLabel: {
@@ -323,7 +315,6 @@ const styles = StyleSheet.create({
     lineHeight: type.line.xs,
   },
   card: {
-    marginHorizontal: spacing.lg,
     gap: spacing.md,
   },
   cardUnavailable: {

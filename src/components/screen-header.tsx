@@ -20,7 +20,6 @@ export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
 
 const styles = StyleSheet.create({
   wrap: {
-    paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
     paddingBottom: spacing.lg,
     gap: spacing.xs,

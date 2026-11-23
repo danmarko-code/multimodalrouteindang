@@ -3,9 +3,10 @@ import DateTimePicker, {
 } from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
+import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { getPeriod } from '@/data/fares';
 import { colors, radii, spacing, touch, type } from '@/theme';
@@ -112,13 +113,10 @@ export default function SearchScreen() {
 
   return (
     <>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled">
+      <Screen contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ScreenHeader title="Search" />
 
-        <Card style={styles.card}>
+        <Card>
           <Text style={styles.label}>From</Text>
           <Pressable
             ref={fromRef}
@@ -144,7 +142,7 @@ export default function SearchScreen() {
           </Pressable>
         </Card>
 
-        <Card style={styles.card}>
+        <Card>
           <Text style={styles.label}>Departure</Text>
           <View style={styles.segment}>
             {(['now', 'at'] as const).map((option) => {
@@ -224,10 +222,10 @@ export default function SearchScreen() {
           </Text>
         </Card>
 
-        <View style={styles.actions}>
+        <View>
           <Button label="Find routes" onPress={findRoutes} />
         </View>
-      </ScrollView>
+      </Screen>
 
       {dropdown && (
         <Modal
@@ -291,15 +289,8 @@ export default function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
   content: {
-    paddingBottom: spacing.xxl,
     gap: spacing.lg,
-  },
-  card: {
-    marginHorizontal: spacing.lg,
   },
   label: {
     color: colors.muted,
@@ -407,9 +398,6 @@ const styles = StyleSheet.create({
   segmentTextActive: {
     color: colors.onTransit,
     fontWeight: type.weight.semibold,
-  },
-  actions: {
-    marginHorizontal: spacing.lg,
   },
   selectField: {
     flexDirection: 'row',

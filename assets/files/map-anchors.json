@@ -1,0 +1,33 @@
+{
+  "viewBox": [
+    800,
+    900
+  ],
+  "note": "Approximate pin positions in map viewBox units. Adjust x and y to match real terminal locations.",
+  "terminals": {
+    "indang-bayan": [
+      473,
+      410
+    ],
+    "municipal-hall": [
+      443,
+      432
+    ],
+    "cvsu": [
+      507,
+      382
+    ],
+    "bancod": [
+      466,
+      304
+    ],
+    "kaytapos": [
+      539,
+      502
+    ],
+    "alulod": [
+      355,
+      444
+    ]
+  }
+}

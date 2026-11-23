@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/components/badge';
 import { Card } from '@/components/card';
+import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { formatClock, terminals, type Terminal } from '@/data/indang';
 import { useLive, type QueueLevel, type TerminalStatus } from '@/data/live';
@@ -176,9 +176,8 @@ export default function TrendsScreen() {
   const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="Trends" subtitle={`Right now · ${formatClock(clock)}`} />
+    <Screen contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScreenHeader title="Trends" subtitle={`Right now · ${formatClock(clock)}`} />
 
         <View style={styles.filterRow}>
           {FILTERS.map((option) => {
@@ -198,11 +197,7 @@ export default function TrendsScreen() {
           })}
         </View>
 
-        {best ? (
-          <View style={styles.topWrap}>
-            <LeastCrowdedCard row={best} />
-          </View>
-        ) : null}
+        {best ? <LeastCrowdedCard row={best} /> : null}
 
         <View style={styles.list}>
           {visible.map((row, index) => (
@@ -214,25 +209,18 @@ export default function TrendsScreen() {
             Based on commuter reports from the last 30 minutes.
           </Text>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.paper,
-  },
   content: {
-    paddingBottom: spacing.xxl,
     gap: spacing.lg,
   },
   filterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.xs,
-    marginHorizontal: spacing.lg,
   },
   filterChip: {
     minHeight: touch.min,
@@ -256,9 +244,6 @@ const styles = StyleSheet.create({
   filterTextActive: {
     color: colors.onTransit,
     fontWeight: type.weight.semibold,
-  },
-  topWrap: {
-    marginHorizontal: spacing.lg,
   },
   topCard: {
     backgroundColor: colors.transit,
@@ -301,7 +286,6 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: spacing.md,
-    marginHorizontal: spacing.lg,
   },
   rowCard: {
     padding: spacing.md,

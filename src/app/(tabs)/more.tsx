@@ -4,16 +4,15 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
+import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { PUJ_CONFIG, TRICYCLE_CONFIG, type PassengerType } from '@/data/fares';
 import { colors, radii, spacing, touch, type } from '@/theme';
@@ -90,9 +89,8 @@ export default function MoreScreen() {
 
   return (
     <>
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <ScreenHeader title="More" />
+      <Screen contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScreenHeader title="More" />
 
           <Card style={styles.group}>
             <Text style={styles.sectionTitle}>Preferences</Text>
@@ -215,8 +213,7 @@ export default function MoreScreen() {
               </Text>
             </View>
           </Card>
-        </ScrollView>
-      </SafeAreaView>
+      </Screen>
 
       {dropdown ? (
         <Modal
@@ -260,16 +257,10 @@ export default function MoreScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.paper,
-  },
   content: {
-    paddingBottom: spacing.xxl,
     gap: spacing.lg,
   },
   group: {
-    marginHorizontal: spacing.lg,
     gap: spacing.sm,
   },
   sectionTitle: {

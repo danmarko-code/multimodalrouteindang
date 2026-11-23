@@ -1,11 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
+import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { terminals, type Terminal } from '@/data/indang';
 import { useLive, type QueueLevel } from '@/data/live';
@@ -97,7 +97,7 @@ export default function ReportScreen() {
 
   if (!terminal) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+      <Screen scroll={false}>
         <Pressable
           onPress={goBack}
           accessibilityRole="button"
@@ -107,7 +107,7 @@ export default function ReportScreen() {
         </Pressable>
         <ScreenHeader title="Report wait time" />
         <Text style={styles.missing}>Terminal not found.</Text>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
@@ -121,8 +121,7 @@ export default function ReportScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <Screen contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Pressable
           onPress={goBack}
           accessibilityRole="button"
@@ -197,18 +196,12 @@ export default function ReportScreen() {
             </View>
           </>
         )}
-      </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.paper,
-  },
   content: {
-    paddingBottom: spacing.xxl,
     gap: spacing.lg,
   },
   back: {
@@ -230,13 +223,11 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: type.size.sm,
     lineHeight: type.line.sm,
-    marginHorizontal: spacing.lg,
   },
   terminalRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginHorizontal: spacing.lg,
   },
   terminalName: {
     flex: 1,
@@ -249,7 +240,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   statusCard: {
-    marginHorizontal: spacing.lg,
     gap: spacing.xs,
   },
   statusRow: {
@@ -289,7 +279,6 @@ const styles = StyleSheet.create({
     fontWeight: type.weight.semibold,
   },
   question: {
-    marginHorizontal: spacing.lg,
     gap: spacing.sm,
   },
   questionLabel: {
@@ -330,13 +319,10 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: type.size.xs,
     lineHeight: type.line.xs,
-    marginHorizontal: spacing.lg,
   },
   submitWrap: {
-    marginHorizontal: spacing.lg,
   },
   successCard: {
-    marginHorizontal: spacing.lg,
     alignItems: 'center',
     gap: spacing.md,
   },

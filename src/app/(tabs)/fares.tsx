@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/card';
+import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { computePujFare, TRICYCLE_FARES, type TricycleZone } from '@/data/fares';
 import { colors, radii, spacing, touch, type } from '@/theme';
@@ -140,7 +140,7 @@ export default function FaresScreen() {
   const [zone, setZone] = useState<TricycleZone>('A');
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+    <Screen scroll={false}>
       <ScreenHeader title="Fares" />
 
       <View style={styles.switchWrap}>
@@ -157,17 +157,12 @@ export default function FaresScreen() {
       {tab === 'tricycle' ? <ZonePicker zone={zone} onChange={setZone} /> : null}
 
       {tab === 'jeepney' ? <JeepneyTable /> : <TricycleTable zone={zone} />}
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.paper,
-  },
   switchWrap: {
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
   segment: {
@@ -200,7 +195,6 @@ const styles = StyleSheet.create({
     fontWeight: type.weight.semibold,
   },
   zoneWrap: {
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     gap: spacing.xs,
   },
@@ -240,7 +234,6 @@ const styles = StyleSheet.create({
   },
   tableCard: {
     flex: 1,
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,
     padding: 0,
     overflow: 'hidden',

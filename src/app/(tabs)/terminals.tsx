@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
 
 import { Badge } from '@/components/badge';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
+import { Screen } from '@/components/screen';
 import { ScreenHeader } from '@/components/screen-header';
 import { formatClock, terminals, type Terminal } from '@/data/indang';
 import { useLive, type QueueLevel } from '@/data/live';
@@ -227,7 +227,7 @@ function TerminalMap({
   const labels = useMemo(() => (width > 0 ? placeLabels(pins, width) : []), [pins, width]);
 
   return (
-    <Card style={styles.mapCard}>
+    <Card>
       <View
         style={styles.mapWrap}
         onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
@@ -308,76 +308,60 @@ export default function TerminalsScreen() {
   const selected = terminals.find((terminal) => terminal.id === selectedId);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <ScreenHeader title="Terminals" />
+    <Screen contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScreenHeader title="Terminals" />
 
-        <View style={styles.toggleWrap}>
-          <Segmented
-            options={[
-              { value: 'list', label: 'List' },
-              { value: 'map', label: 'Map' },
-            ]}
-            value={view}
-            onChange={setView}
-          />
-        </View>
+      <Segmented
+        options={[
+          { value: 'list', label: 'List' },
+          { value: 'map', label: 'Map' },
+        ]}
+        value={view}
+        onChange={setView}
+      />
 
-        {view === 'list' ? (
-          <>
-            <View style={styles.filterRow}>
-              {FILTERS.map((option) => {
-                const active = filter === option.value;
-                return (
-                  <Pressable
-                    key={option.value}
-                    onPress={() => setFilter(option.value)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    style={[styles.filterChip, active && styles.filterChipActive]}>
-                    <Text style={[styles.filterText, active && styles.filterTextActive]}>
-                      {option.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+      {view === 'list' ? (
+        <>
+          <View style={styles.filterRow}>
+            {FILTERS.map((option) => {
+              const active = filter === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setFilter(option.value)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  style={[styles.filterChip, active && styles.filterChipActive]}>
+                  <Text style={[styles.filterText, active && styles.filterTextActive]}>
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
-            <View style={styles.list}>
-              {filtered.map((terminal) => (
-                <TerminalCard key={terminal.id} terminal={terminal} open={isOpen(terminal, now)} />
-              ))}
-              {filtered.length === 0 ? (
-                <Text style={styles.empty}>No terminals match this filter.</Text>
-              ) : null}
-            </View>
-          </>
-        ) : (
-          <>
-            <TerminalMap now={now} selectedId={selectedId} onSelect={setSelectedId} />
-            {selected ? (
-              <View style={styles.detailWrap}>
-                <TerminalCard terminal={selected} open={isOpen(selected, now)} />
-              </View>
+          <View style={styles.list}>
+            {filtered.map((terminal) => (
+              <TerminalCard key={terminal.id} terminal={terminal} open={isOpen(terminal, now)} />
+            ))}
+            {filtered.length === 0 ? (
+              <Text style={styles.empty}>No terminals match this filter.</Text>
             ) : null}
-          </>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+          </View>
+        </>
+      ) : (
+        <>
+          <TerminalMap now={now} selectedId={selectedId} onSelect={setSelectedId} />
+          {selected ? <TerminalCard terminal={selected} open={isOpen(selected, now)} /> : null}
+        </>
+      )}
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.paper,
-  },
   content: {
-    paddingBottom: spacing.xxl,
     gap: spacing.lg,
-  },
-  toggleWrap: {
-    marginHorizontal: spacing.lg,
   },
   segment: {
     flexDirection: 'row',
@@ -412,7 +396,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.xs,
-    marginHorizontal: spacing.lg,
   },
   filterChip: {
     minHeight: touch.min,
@@ -439,7 +422,6 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: spacing.md,
-    marginHorizontal: spacing.lg,
   },
   cardTop: {
     flexDirection: 'row',
@@ -506,14 +488,8 @@ const styles = StyleSheet.create({
   cardClosed: {
     opacity: 0.6,
   },
-  mapCard: {
-    marginHorizontal: spacing.lg,
-  },
   mapWrap: {
     width: '100%',
-  },
-  detailWrap: {
-    marginHorizontal: spacing.lg,
   },
   empty: {
     color: colors.muted,

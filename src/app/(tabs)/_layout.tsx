@@ -16,7 +16,7 @@ const tabs = [
 
 export default function RootLayout() {
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
       <Tabs>
         <TabSlot style={styles.slot} />
         <TabList asChild>
