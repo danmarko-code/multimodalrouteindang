@@ -4,7 +4,6 @@ import DateTimePicker, {
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { ScreenHeader } from '@/components/screen-header';
@@ -12,12 +11,9 @@ import { getPeriod } from '@/data/fares';
 import { colors, radii, spacing, touch, type } from '@/theme';
 
 const STARTING_POINTS = ['Dasmariñas', 'Trece Martires'] as const;
-
 const DESTINATIONS = ['CvSU Main Gate', 'CvSU Gate 2'] as const;
-
 const CHIP_MINUTES = 5;
 
-// Round the clock up to the next 5-minute mark so the default is quick to adjust.
 function roundUpToFive(date: Date): Date {
   const rounded = new Date(date);
   rounded.setSeconds(0, 0);
@@ -52,6 +48,7 @@ export default function SearchScreen() {
   const [destination, setDestination] = useState<string>('CvSU Main Gate');
   const [departure, setDeparture] = useState<'now' | 'at'>('now');
   const [departTime, setDepartTime] = useState(() => roundUpToFive(new Date()));
+  const [toOpen, setToOpen] = useState(false); // New state for dropdown
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const openPicker = () => setPickerOpen(true);
@@ -87,7 +84,7 @@ export default function SearchScreen() {
       <ScreenHeader title="Search" />
 
       <Card style={styles.card}>
-        <Text style={styles.label}>From</Text>
+        <Text style={[styles.label, styles.labelSpaced]}>From</Text>
         <TextInput
           value={origin}
           onChangeText={setOrigin}
@@ -109,27 +106,33 @@ export default function SearchScreen() {
         </Pressable>
 
         <Text style={[styles.label, styles.labelSpaced]}>To</Text>
-        <View style={styles.destinationRow}>
-          {DESTINATIONS.map((place) => {
-            const active = destination === place;
-            return (
-              <Pressable
-                key={place}
-                onPress={() => setDestination(place)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                style={({ pressed }) => [
-                  styles.destination,
-                  active && styles.destinationActive,
-                  pressed && styles.pressed,
-                ]}>
-                <Text
-                  style={[styles.destinationText, active && styles.destinationTextActive]}>
-                  {place}
-                </Text>
-              </Pressable>
-            );
-          })}
+        <View style={styles.selectContainer}>
+          <Pressable
+            onPress={() => setToOpen((open) => !open)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: toOpen }}
+            accessibilityLabel={`Destination, ${destination}. Change destination`}
+            style={({ pressed }) => [styles.input, styles.selectField, pressed && styles.pressed]}>
+            <Text style={styles.selectValue}>{destination}</Text>
+            <Text style={styles.selectGlyph}>▾</Text>
+          </Pressable>
+          {toOpen ? (
+            <View style={styles.menu}>
+              {DESTINATIONS.map((place) => {
+                const active = destination === place;
+                return (
+                  <Pressable
+                    key={place}
+                    onPress={() => { setDestination(place); setToOpen(false); }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                    style={[styles.menuItem, active && styles.chipActive]}>
+                    <Text style={[styles.menuText, active && styles.chipTextActive]}>{place}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
         </View>
       </Card>
 
@@ -468,5 +471,43 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginHorizontal: spacing.lg,
+  },
+  selectContainer: {
+    position: 'relative',
+  },
+  selectField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: touch.min,
+  },
+  selectValue: {
+    color: colors.ink,
+    fontSize: type.size.md,
+  },
+  selectGlyph: {
+    color: colors.muted,
+    fontSize: type.size.md,
+  },
+  menu: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    marginTop: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radii.sm,
+    backgroundColor: colors.paper,
+  },
+  menuItem: {
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuText: {
+    color: colors.ink,
+    fontSize: type.size.sm,
   },
 });
