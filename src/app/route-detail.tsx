@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -198,6 +198,11 @@ export default function RouteDetailScreen() {
     [route, origin],
   );
 
+  const reportTerminalId = useMemo(
+    () => diagramStops.find((stop) => stop.terminalId)?.terminalId,
+    [diagramStops],
+  );
+
   return (
     <SafeAreaView
       style={styles.safe}
@@ -320,7 +325,11 @@ export default function RouteDetailScreen() {
         {/* --- Report button --- */}
         <Button
           label="Report terminal wait time"
-          onPress={() => {}}
+          onPress={() => {
+            if (reportTerminalId) {
+              router.push({ pathname: '/report', params: { terminalId: reportTerminalId } });
+            }
+          }}
         />
       </ScrollView>
     </SafeAreaView>

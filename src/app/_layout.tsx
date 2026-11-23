@@ -9,6 +9,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="results" />
         <Stack.Screen name="route-detail" />
+        <Stack.Screen name="report" />
       </Stack>
     </>
   );

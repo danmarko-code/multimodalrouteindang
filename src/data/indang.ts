@@ -18,6 +18,7 @@ export type Terminal = {
   waitMinutes: number;
   reportsToday: number;
   lastReportMinutesAgo: number;
+  distanceMeters: number;
 };
 
 export type PlaceCategory =
@@ -68,6 +69,7 @@ export const terminals: Terminal[] = [
     waitMinutes: 14,
     reportsToday: 23,
     lastReportMinutesAgo: 4,
+    distanceMeters: 18,
   },
   {
     id: 't-cvsu',
@@ -80,6 +82,7 @@ export const terminals: Terminal[] = [
     waitMinutes: 8,
     reportsToday: 31,
     lastReportMinutesAgo: 2,
+    distanceMeters: 27,
   },
   {
     id: 't-kaytapos',
@@ -92,6 +95,7 @@ export const terminals: Terminal[] = [
     waitMinutes: 22,
     reportsToday: 12,
     lastReportMinutesAgo: 9,
+    distanceMeters: 34,
   },
   {
     id: 't-alulod',
@@ -104,6 +108,7 @@ export const terminals: Terminal[] = [
     waitMinutes: 6,
     reportsToday: 9,
     lastReportMinutesAgo: 12,
+    distanceMeters: 42,
   },
   {
     id: 't-bancod',
@@ -116,6 +121,7 @@ export const terminals: Terminal[] = [
     waitMinutes: 11,
     reportsToday: 17,
     lastReportMinutesAgo: 6,
+    distanceMeters: 23,
   },
   {
     id: 't-municipal',
@@ -127,6 +133,7 @@ export const terminals: Terminal[] = [
     waitMinutes: 18,
     reportsToday: 14,
     lastReportMinutesAgo: 3,
+    distanceMeters: 9,
   },
 ];
 

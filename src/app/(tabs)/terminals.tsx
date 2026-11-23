@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -107,10 +108,12 @@ function TerminalCard({ terminal, open }: { terminal: Terminal; open: boolean })
     <Card style={!open && styles.cardClosed}>
       <View style={styles.cardTop}>
         <Text style={styles.terminalName}>{displayName(terminal.name)}</Text>
-        <Badge
-          label={terminal.mode === 'jeepney' ? 'Jeepney' : 'Tricycle'}
-          tone={terminal.mode === 'jeepney' ? 'route' : 'fare'}
-        />
+        <View style={styles.modeChip}>
+          <Badge
+            label={terminal.mode === 'jeepney' ? 'Jeepney' : 'Tricycle'}
+            tone={terminal.mode === 'jeepney' ? 'route' : 'fare'}
+          />
+        </View>
       </View>
       <View style={styles.cardRow}>
         <Badge label={open ? 'Open' : 'Closed'} tone={open ? 'transit' : 'muted'} />
@@ -129,7 +132,13 @@ function TerminalCard({ terminal, open }: { terminal: Terminal; open: boolean })
       <Text style={styles.reported}>
         {`Reported ${terminal.lastReportMinutesAgo} min ago · ${terminal.reportsToday} reports today`}
       </Text>
-      <Button label="Report wait time" onPress={() => {}} variant="secondary" />
+      <Button
+        label="Report wait time"
+        onPress={() =>
+          router.push({ pathname: '/report', params: { terminalId: terminal.id } })
+        }
+        variant="secondary"
+      />
     </Card>
   );
 }
@@ -417,6 +426,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  modeChip: {
+    flexShrink: 0,
   },
   terminalName: {
     flex: 1,
