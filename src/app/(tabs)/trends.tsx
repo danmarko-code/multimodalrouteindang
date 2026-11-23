@@ -1,539 +1,396 @@
-import { useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Badge } from '@/components/badge';
 import { Card } from '@/components/card';
 import { ScreenHeader } from '@/components/screen-header';
-import { terminals } from '@/data/indang';
-import {
-  ALL_TERMINALS,
-  getTrends,
-  TREND_HOURS,
-  TREND_WEEKDAYS,
-  type TerminalTrends,
-} from '@/data/trends';
+import { formatClock, terminals, type Terminal } from '@/data/indang';
+import { useLive, type QueueLevel, type TerminalStatus } from '@/data/live';
 import { colors, radii, spacing, touch, type } from '@/theme';
 
-type Period = 'week' | 'month';
+type Filter = 'all' | 'jeepney' | 'tricycle';
+type Crowd = 'light' | 'moderate' | 'heavy';
 
-const CHART_HEIGHT = 200;
-const CHART_TOP = 16;
-const CHART_BOTTOM = 26;
-const CHART_LEFT = 46;
-const CHART_RIGHT = 8;
+// The theme has no red token; Heavy needs one for the bar and badge.
+const HEAVY_COLOR = '#B42318';
+const QUEUE_LEVELS: QueueLevel[] = ['none', '1-5', '6-15', '16+'];
 
-const TERMINAL_OPTIONS = [
-  { id: ALL_TERMINALS, name: 'All terminals' },
-  ...terminals.map((terminal) => ({ id: terminal.id, name: terminal.name })),
+const CROWD_OF: Record<QueueLevel, Crowd> = {
+  none: 'light',
+  '1-5': 'light',
+  '6-15': 'moderate',
+  '16+': 'heavy',
+};
+
+const CROWD_META: Record<Crowd, { label: string; color: string }> = {
+  light: { label: 'Light', color: colors.transit },
+  moderate: { label: 'Moderate', color: colors.fare },
+  heavy: { label: 'Heavy', color: HEAVY_COLOR },
+};
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'jeepney', label: 'Jeepney' },
+  { value: 'tricycle', label: 'Tricycle' },
 ];
 
-function formatHour(hour: number, withMinutes = false): string {
-  const period = hour < 12 ? 'AM' : 'PM';
-  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-  return withMinutes ? `${hour12}:00 ${period}` : `${hour12} ${period}`;
+type Row = { terminal: Terminal; status: TerminalStatus; open: boolean };
+
+const minutesOf = (clock: string) => {
+  const [hours, minutes] = clock.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+function isOpen(terminal: Terminal, now: Date): boolean {
+  const hours = terminal.operatingHours;
+  if (!hours) return true;
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  return minutes >= minutesOf(hours.opensAt) && minutes <= minutesOf(hours.closesAt);
 }
 
-function busiestIndex(values: number[]): number {
-  return values.indexOf(Math.max(...values));
+function displayName(name: string): string {
+  return name.replace('Poblacion', 'Indang Bayan');
 }
 
-type SegmentOption<T extends string> = { value: T; label: string };
-
-function Segmented<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: SegmentOption<T>[];
-  value: T;
-  onChange: (next: T) => void;
-}) {
-  return (
-    <View style={styles.segment}>
-      {options.map((option) => {
-        const active = option.value === value;
-        return (
-          <Pressable
-            key={option.value}
-            onPress={() => onChange(option.value)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            style={[styles.segmentItem, active && styles.segmentItemActive]}>
-            <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-              {option.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
+function modeLabel(terminal: Terminal): string {
+  return terminal.mode === 'jeepney' ? 'Jeepney' : 'Tricycle';
 }
 
-function SummaryRow({
-  trends,
-  period,
-}: {
-  trends: TerminalTrends;
-  period: Period;
-}) {
-  const peakHour = TREND_HOURS[busiestIndex(trends.hourlyAverageWait)];
-  const averageWait = Math.round(
-    trends.hourlyAverageWait.reduce((sum, value) => sum + value, 0) /
-      trends.hourlyAverageWait.length,
-  );
-  const reports =
-    period === 'week'
-      ? trends.reportsPerDay.reduce((sum, value) => sum + value, 0)
-      : trends.reportsLast30Days;
+function reportedText(minutesAgo: number): string {
+  return minutesAgo === 0 ? 'Reported just now' : `Reported ${minutesAgo} min ago`;
+}
+
+function compareRows(a: Row, b: Row): number {
+  if (a.open !== b.open) return a.open ? -1 : 1;
+  if (a.status.isStale !== b.status.isStale) return a.status.isStale ? 1 : -1;
+  const queueDelta =
+    QUEUE_LEVELS.indexOf(a.status.queueLevel) - QUEUE_LEVELS.indexOf(b.status.queueLevel);
+  if (queueDelta !== 0) return queueDelta;
+  const waitDelta = a.status.waitMinutes - b.status.waitMinutes;
+  if (waitDelta !== 0) return waitDelta;
+  return a.terminal.name.localeCompare(b.terminal.name);
+}
+
+function LeastCrowdedCard({ row }: { row: Row }) {
+  const { terminal, status } = row;
+  const meta = CROWD_META[CROWD_OF[status.queueLevel]];
 
   return (
-    <View style={styles.summaryRow}>
-      <Card style={styles.summaryCard}>
-        <Text style={styles.summaryLabel}>Busiest hour</Text>
-        <Text style={styles.summaryValue}>{formatHour(peakHour, true)}</Text>
-      </Card>
-      <Card style={styles.summaryCard}>
-        <Text style={styles.summaryLabel}>Average wait</Text>
-        <Text style={styles.summaryValue}>{`${averageWait} min`}</Text>
-      </Card>
-      <Card style={styles.summaryCard}>
-        <Text style={styles.summaryLabel}>Reports</Text>
-        <Text style={styles.summaryValue}>{String(reports)}</Text>
-      </Card>
-    </View>
-  );
-}
-
-function BusiestHoursChart({ trends }: { trends: TerminalTrends }) {
-  const [width, setWidth] = useState(0);
-  const values = trends.hourlyAverageWait;
-  const max = Math.max(...values);
-  const yMax = Math.max(10, Math.ceil(max / 10) * 10);
-  const peakIndex = busiestIndex(values);
-  const plotWidth = Math.max(0, width - CHART_LEFT - CHART_RIGHT);
-  const plotHeight = CHART_HEIGHT - CHART_TOP - CHART_BOTTOM;
-  const slot = plotWidth / values.length;
-  const barWidth = Math.max(4, slot * 0.6);
-  const y = (value: number) => CHART_TOP + plotHeight - (value / yMax) * plotHeight;
-  const grid = [0, yMax / 2, yMax];
-
-  return (
-    <Card style={styles.chartCard}>
-      <Text style={styles.chartTitle}>Busiest hours</Text>
-      <View
-        style={styles.chartWrap}
-        onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
-        {width > 0 ? (
-          <Svg width={width} height={CHART_HEIGHT}>
-            {grid.map((value) => (
-              <G key={value}>
-                <Line
-                  x1={CHART_LEFT}
-                  y1={y(value)}
-                  x2={width - CHART_RIGHT}
-                  y2={y(value)}
-                  stroke={colors.line}
-                  strokeWidth={1}
-                />
-                <SvgText
-                  x={CHART_LEFT - 6}
-                  y={y(value) + 3}
-                  fontSize={9}
-                  fill={colors.muted}
-                  textAnchor="end">
-                  {`${Math.round(value)} min`}
-                </SvgText>
-              </G>
-            ))}
-            {values.map((value, index) => (
-              <Rect
-                key={`bar-${index}`}
-                x={CHART_LEFT + index * slot + (slot - barWidth) / 2}
-                y={y(value)}
-                width={barWidth}
-                height={Math.max(1, y(0) - y(value))}
-                rx={2}
-                fill={index === peakIndex ? colors.fare : colors.transit}
-              />
-            ))}
-            {values.map((value, index) =>
-              index % 3 === 0 ? (
-                <SvgText
-                  key={`label-${index}`}
-                  x={CHART_LEFT + index * slot + slot / 2}
-                  y={CHART_HEIGHT - 8}
-                  fontSize={10}
-                  fill={colors.muted}
-                  textAnchor="middle">
-                  {formatHour(TREND_HOURS[index])}
-                </SvgText>
-              ) : null,
-            )}
-          </Svg>
-        ) : null}
+    <Card style={styles.topCard}>
+      <Text style={styles.topLabel}>Least crowded now</Text>
+      <View style={styles.topNameRow}>
+        <Text style={styles.topName}>{displayName(terminal.name)}</Text>
+        <View style={styles.topChip}>
+          <Badge label={modeLabel(terminal)} tone="muted" />
+        </View>
       </View>
-      <Text style={styles.takeaway}>
-        {`Waits peak at ${formatHour(TREND_HOURS[peakIndex], true)}`}
+      <Text style={[styles.topWait, status.isStale && styles.dimmed]}>
+        {status.isStale
+          ? 'No recent report'
+          : `~${status.waitMinutes} min wait · ${meta.label}`}
       </Text>
+      <Text style={styles.topReported}>{reportedText(status.minutesAgo)}</Text>
     </Card>
   );
 }
 
-function WeekdayChart({ trends }: { trends: TerminalTrends }) {
-  const [width, setWidth] = useState(0);
-  const values = trends.weekdayAverageWait;
-  const max = Math.max(...values);
-  const yMax = Math.max(5, Math.ceil(max / 5) * 5);
-  const peakIndex = busiestIndex(values);
-  const top = 28;
-  const bottom = 26;
-  const left = 8;
-  const right = 8;
-  const plotWidth = Math.max(0, width - left - right);
-  const plotHeight = CHART_HEIGHT - top - bottom;
-  const step = plotWidth / (values.length - 1);
-  const x = (index: number) => left + index * step;
-  const y = (value: number) => top + plotHeight - (value / yMax) * plotHeight;
-  const baseline = top + plotHeight;
-  const linePath = values
-    .map((value, index) => `${index === 0 ? 'M' : 'L'} ${x(index)},${y(value)}`)
-    .join(' ');
-  const areaPath = `M ${x(0)},${baseline} ${values
-    .map((value, index) => `L ${x(index)},${y(value)}`)
-    .join(' ')} L ${x(values.length - 1)},${baseline} Z`;
+function RankedRow({ row, rank }: { row: Row; rank: number }) {
+  const { terminal, status, open } = row;
+  const meta = CROWD_META[CROWD_OF[status.queueLevel]];
+  const fill = QUEUE_LEVELS.indexOf(status.queueLevel) / (QUEUE_LEVELS.length - 1);
 
   return (
-    <Card style={styles.chartCard}>
-      <Text style={styles.chartTitle}>Average wait by weekday</Text>
-      <View
-        style={styles.chartWrap}
-        onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
-        {width > 0 ? (
-          <Svg width={width} height={CHART_HEIGHT}>
-            <Line
-              x1={left}
-              y1={baseline}
-              x2={width - right}
-              y2={baseline}
-              stroke={colors.line}
-              strokeWidth={1}
-            />
-            <Path d={areaPath} fill={colors.transit} fillOpacity={0.12} />
-            <Path
-              d={linePath}
-              fill="none"
-              stroke={colors.transit}
-              strokeWidth={2.5}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-            {values.map((value, index) => (
-              <Circle
-                key={`point-${index}`}
-                cx={x(index)}
-                cy={y(value)}
-                r={3.5}
-                fill={colors.transit}
-                stroke={colors.surface}
-                strokeWidth={2}
-              />
-            ))}
-            <SvgText
-              x={x(peakIndex)}
-              y={y(max) - 8}
-              fontSize={10}
-              fontWeight="600"
-              fill={colors.ink}
-              textAnchor="middle">
-              {`${max} min`}
-            </SvgText>
-            {values.map((value, index) => (
-              <SvgText
-                key={`day-${index}`}
-                x={x(index)}
-                y={CHART_HEIGHT - 8}
-                fontSize={9}
-                fill={colors.muted}
-                textAnchor="middle">
-                {TREND_WEEKDAYS[index].slice(0, 3)}
-              </SvgText>
-            ))}
-          </Svg>
-        ) : null}
+    <Pressable
+      onPress={() => router.push({ pathname: '/report', params: { terminalId: terminal.id } })}
+      accessibilityRole="button"
+      accessibilityLabel={`${displayName(terminal.name)}, rank ${rank}. Report wait time`}
+      style={({ pressed }) => [styles.row, !open && styles.rowClosed, pressed && styles.pressed]}>
+      <View style={styles.rowTop}>
+        <Text style={styles.rank}>{String(rank)}</Text>
+        <View style={styles.rowNameWrap}>
+          <Text style={styles.rowName} numberOfLines={1}>
+            {displayName(terminal.name)}
+          </Text>
+          <Badge
+            label={modeLabel(terminal)}
+            tone={terminal.mode === 'jeepney' ? 'route' : 'fare'}
+          />
+        </View>
+        <Badge label={open ? 'Open' : 'Closed'} tone={open ? 'transit' : 'muted'} />
       </View>
-      <Text style={styles.takeaway}>
-        {`Longest waits on ${TREND_WEEKDAYS[peakIndex]}`}
-      </Text>
-    </Card>
+
+      <View style={styles.barTrack}>
+        <View
+          style={[
+            styles.barFill,
+            {
+              width: `${fill * 100}%`,
+              backgroundColor: status.isStale ? colors.muted : meta.color,
+            },
+          ]}
+        />
+      </View>
+
+      <View style={styles.rowBottom}>
+        <Text style={[styles.rowWait, (status.isStale || !open) && styles.dimmed]}>
+          {`~${status.waitMinutes} min wait`}
+        </Text>
+        {status.isStale ? (
+          <Text style={styles.noReport}>No recent report</Text>
+        ) : (
+          <View style={[styles.crowdBadge, { backgroundColor: meta.color }]}>
+            <Text style={styles.crowdText}>{meta.label}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={styles.rowReported}>{reportedText(status.minutesAgo)}</Text>
+    </Pressable>
   );
 }
 
 export default function TrendsScreen() {
-  const [terminalId, setTerminalId] = useState<string>(ALL_TERMINALS);
-  const [period, setPeriod] = useState<Period>('week');
-  const [dropdown, setDropdown] = useState<{
-    top: number;
-    left: number;
-    width: number;
-  } | null>(null);
-  const triggerRef = useRef<any>(null);
+  const { getTerminalStatus } = useLive();
+  const [filter, setFilter] = useState<Filter>('all');
+  const [now, setNow] = useState(() => new Date());
 
-  const trends = getTrends(terminalId);
-  const selectedName =
-    TERMINAL_OPTIONS.find((option) => option.id === terminalId)?.name ??
-    'All terminals';
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const openDropdown = () => {
-    triggerRef.current?.measureInWindow(
-      (x: number, y: number, width: number, height: number) => {
-        setDropdown({ top: y + height + 4, left: x, width });
-      },
-    );
-  };
+  const rows: Row[] = terminals
+    .map((terminal) => ({
+      terminal,
+      status: getTerminalStatus(terminal.id),
+      open: isOpen(terminal, now),
+    }))
+    .filter((row): row is Row => row.status !== undefined)
+    .sort(compareRows);
+
+  const visible = rows.filter((row) => filter === 'all' || row.terminal.mode === filter);
+  const fresh = visible.filter((row) => row.open && !row.status.isStale);
+  const best = (fresh.length > 0 ? fresh : visible)[0];
+
+  const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   return (
-    <>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <ScreenHeader title="Trends" />
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScreenHeader title="Trends" subtitle={`Right now · ${formatClock(clock)}`} />
 
-        <Card style={styles.controlsCard}>
-          <Text style={styles.label}>Terminal</Text>
-          <Pressable
-            ref={triggerRef}
-            onPress={openDropdown}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: dropdown !== null }}
-            accessibilityLabel={`Terminal, ${selectedName}. Change terminal`}
-            style={({ pressed }) => [styles.selectField, pressed && styles.pressed]}>
-            <Text style={styles.selectValue} numberOfLines={1}>
-              {selectedName}
-            </Text>
-            <Text style={styles.selectGlyph}>{dropdown ? '▴' : '▾'}</Text>
-          </Pressable>
+        <View style={styles.filterRow}>
+          {FILTERS.map((option) => {
+            const active = filter === option.value;
+            return (
+              <Pressable
+                key={option.value}
+                onPress={() => setFilter(option.value)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                style={[styles.filterChip, active && styles.filterChipActive]}>
+                <Text style={[styles.filterText, active && styles.filterTextActive]}>
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
-          <View style={styles.periodSwitch}>
-            <Segmented
-              options={[
-                { value: 'week', label: 'Last 7 days' },
-                { value: 'month', label: 'Last 30 days' },
-              ]}
-              value={period}
-              onChange={setPeriod}
-            />
+        {best ? (
+          <View style={styles.topWrap}>
+            <LeastCrowdedCard row={best} />
           </View>
-        </Card>
+        ) : null}
 
-        <SummaryRow trends={trends} period={period} />
-        <BusiestHoursChart trends={trends} />
-        <WeekdayChart trends={trends} />
+        <View style={styles.list}>
+          {visible.map((row, index) => (
+            <Card key={row.terminal.id} style={styles.rowCard}>
+              <RankedRow row={row} rank={index + 1} />
+            </Card>
+          ))}
+          <Text style={styles.caption}>
+            Based on commuter reports from the last 30 minutes.
+          </Text>
+        </View>
       </ScrollView>
-
-      {dropdown ? (
-        <Modal
-          visible
-          transparent
-          animationType="fade"
-          statusBarTranslucent
-          onRequestClose={() => setDropdown(null)}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setDropdown(null)} />
-          <View
-            style={[
-              styles.modalList,
-              { top: dropdown.top, left: dropdown.left, width: dropdown.width },
-            ]}>
-            {TERMINAL_OPTIONS.map((option) => {
-              const active = option.id === terminalId;
-              return (
-                <Pressable
-                  key={option.id}
-                  onPress={() => {
-                    setTerminalId(option.id);
-                    setDropdown(null);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  style={[styles.modalItem, active && styles.modalItemSelected]}>
-                  <View style={styles.modalItemRow}>
-                    <Text
-                      numberOfLines={1}
-                      style={[styles.modalItemText, active && styles.modalItemTextSelected]}>
-                      {option.name}
-                    </Text>
-                    {active ? <Text style={styles.checkIcon}>✓</Text> : null}
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-        </Modal>
-      ) : null}
-    </>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: {
+  safe: {
     flex: 1,
+    backgroundColor: colors.paper,
   },
   content: {
     paddingBottom: spacing.xxl,
     gap: spacing.lg,
   },
-  controlsCard: {
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
     marginHorizontal: spacing.lg,
   },
-  label: {
-    color: colors.muted,
-    fontSize: type.size.xs,
-    lineHeight: type.line.xs,
-    fontWeight: type.weight.semibold,
-    marginBottom: spacing.xs,
-  },
-  selectField: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+  filterChip: {
     minHeight: touch.min,
+    justifyContent: 'center',
     paddingHorizontal: spacing.md,
+    borderRadius: radii.sm,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radii.sm,
-    backgroundColor: colors.paper,
-  },
-  selectValue: {
-    flex: 1,
-    color: colors.ink,
-    fontSize: type.size.md,
-    lineHeight: type.line.md,
-  },
-  selectGlyph: {
-    color: colors.muted,
-    fontSize: type.size.md,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  periodSwitch: {
-    marginTop: spacing.md,
-  },
-  segment: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    padding: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radii.sm,
     backgroundColor: colors.surface,
   },
-  segmentItem: {
-    flex: 1,
-    minHeight: touch.min,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.sm,
-  },
-  segmentItemActive: {
+  filterChipActive: {
     backgroundColor: colors.transit,
+    borderColor: colors.transit,
   },
-  segmentText: {
+  filterText: {
     color: colors.muted,
     fontSize: type.size.sm,
     lineHeight: type.line.sm,
     fontWeight: type.weight.medium,
   },
-  segmentTextActive: {
+  filterTextActive: {
     color: colors.onTransit,
     fontWeight: type.weight.semibold,
   },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
+  topWrap: {
     marginHorizontal: spacing.lg,
   },
-  summaryCard: {
-    flex: 1,
-    padding: spacing.md,
-    gap: 2,
+  topCard: {
+    backgroundColor: colors.transit,
+    borderColor: colors.transit,
+    gap: spacing.sm,
   },
-  summaryLabel: {
-    color: colors.muted,
+  topLabel: {
+    color: colors.onTransit,
     fontSize: type.size.xs,
     lineHeight: type.line.xs,
+    fontWeight: type.weight.semibold,
+    letterSpacing: 0.3,
   },
-  summaryValue: {
+  topNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  topName: {
+    flex: 1,
+    color: colors.onTransit,
+    fontSize: type.size.lg,
+    lineHeight: type.line.lg,
+    fontWeight: type.weight.bold,
+  },
+  topChip: {
+    flexShrink: 0,
+  },
+  topWait: {
+    color: colors.onTransit,
+    fontSize: type.size.md,
+    lineHeight: type.line.md,
+    fontWeight: type.weight.semibold,
+  },
+  topReported: {
+    color: colors.onTransit,
+    fontSize: type.size.xs,
+    lineHeight: type.line.xs,
+    opacity: 0.85,
+  },
+  list: {
+    gap: spacing.md,
+    marginHorizontal: spacing.lg,
+  },
+  rowCard: {
+    padding: spacing.md,
+  },
+  row: {
+    minHeight: touch.min,
+    gap: spacing.sm,
+  },
+  rowClosed: {
+    opacity: 0.6,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  rowTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  rank: {
+    width: spacing.xl,
+    color: colors.muted,
+    fontSize: type.size.md,
+    lineHeight: type.line.md,
+    fontWeight: type.weight.bold,
+  },
+  rowNameWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  rowName: {
+    flexShrink: 1,
     color: colors.ink,
     fontSize: type.size.sm,
     lineHeight: type.line.sm,
     fontWeight: type.weight.semibold,
   },
-  chartCard: {
-    marginHorizontal: spacing.lg,
-    gap: spacing.sm,
-  },
-  chartTitle: {
-    color: colors.ink,
-    fontSize: type.size.md,
-    lineHeight: type.line.md,
-    fontWeight: type.weight.bold,
-  },
-  chartWrap: {
-    width: '100%',
-  },
-  takeaway: {
-    color: colors.muted,
-    fontSize: type.size.xs,
-    lineHeight: type.line.xs,
-  },
-  modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'transparent',
-  },
-  modalList: {
-    position: 'absolute',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
+  barTrack: {
+    height: spacing.xs + 2,
     borderRadius: radii.sm,
+    backgroundColor: colors.line,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 6,
   },
-  modalItem: {
-    height: touch.min,
-    paddingHorizontal: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
+  barFill: {
+    height: '100%',
+    borderRadius: radii.sm,
   },
-  modalItemRow: {
-    flex: 1,
+  rowBottom: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  modalItemSelected: {
-    backgroundColor: 'rgba(34, 197, 94, 0.12)',
-  },
-  modalItemText: {
+  rowWait: {
     color: colors.ink,
-    fontSize: type.size.md,
-    flex: 1,
-  },
-  modalItemTextSelected: {
-    color: '#15803d',
+    fontSize: type.size.sm,
+    lineHeight: type.line.sm,
     fontWeight: type.weight.semibold,
   },
-  checkIcon: {
-    color: '#15803d',
-    fontSize: type.size.md,
-    fontWeight: 'bold',
+  crowdBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.sm,
+  },
+  crowdText: {
+    color: colors.onTransit,
+    fontSize: type.size.xs,
+    lineHeight: type.line.xs,
+    fontWeight: type.weight.semibold,
+  },
+  noReport: {
+    color: colors.muted,
+    fontSize: type.size.xs,
+    lineHeight: type.line.xs,
+  },
+  dimmed: {
+    opacity: 0.5,
+  },
+  rowReported: {
+    color: colors.muted,
+    fontSize: type.size.xs,
+    lineHeight: type.line.xs,
+  },
+  caption: {
+    color: colors.muted,
+    fontSize: type.size.xs,
+    lineHeight: type.line.xs,
+    textAlign: 'center',
   },
 });
