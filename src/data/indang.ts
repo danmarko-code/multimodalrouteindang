@@ -10,9 +10,14 @@ export type Terminal = {
   id: string;
   name: string;
   area: string;
+  mode: 'jeepney' | 'tricycle';
   lat: number;
   lng: number;
   operatingHours?: OperatingHours;
+  // Live figures are kept here so the screens stay presentational.
+  waitMinutes: number;
+  reportsToday: number;
+  lastReportMinutesAgo: number;
 };
 
 export type PlaceCategory =
@@ -56,43 +61,73 @@ export const terminals: Terminal[] = [
     id: 't-poblacion',
     name: 'Poblacion Terminal',
     area: 'Poblacion',
+    mode: 'tricycle',
     lat: 14.1919,
     lng: 120.8778,
     operatingHours: { opensAt: '06:00', closesAt: '19:00' },
+    waitMinutes: 14,
+    reportsToday: 23,
+    lastReportMinutesAgo: 4,
   },
   {
     id: 't-cvsu',
     name: 'CvSU Terminal',
     area: 'CvSU Main Campus',
+    mode: 'jeepney',
     lat: 14.1936,
     lng: 120.8794,
     operatingHours: { opensAt: '06:00', closesAt: '19:00' },
+    waitMinutes: 8,
+    reportsToday: 31,
+    lastReportMinutesAgo: 2,
   },
   {
     id: 't-kaytapos',
     name: 'Kaytapos Terminal',
     area: 'Kaytapos',
+    mode: 'jeepney',
     lat: 14.1875,
     lng: 120.883,
     operatingHours: { opensAt: '06:00', closesAt: '19:00' },
+    waitMinutes: 22,
+    reportsToday: 12,
+    lastReportMinutesAgo: 9,
   },
   {
     id: 't-alulod',
     name: 'Alulod Terminal',
     area: 'Alulod',
+    mode: 'jeepney',
     lat: 14.2,
     lng: 120.86,
     operatingHours: { opensAt: '06:00', closesAt: '19:00' },
+    waitMinutes: 6,
+    reportsToday: 9,
+    lastReportMinutesAgo: 12,
   },
   {
     id: 't-bancod',
     name: 'Bancod Terminal',
     area: 'Bancod',
+    mode: 'jeepney',
     lat: 14.18,
     lng: 120.885,
     operatingHours: { opensAt: '06:00', closesAt: '19:00' },
+    waitMinutes: 11,
+    reportsToday: 17,
+    lastReportMinutesAgo: 6,
   },
-  { id: 't-municipal', name: 'Municipal Hall Stop', area: 'Poblacion', lat: 14.1928, lng: 120.8762 },
+  {
+    id: 't-municipal',
+    name: 'Municipal Hall Stop',
+    area: 'Poblacion',
+    mode: 'tricycle',
+    lat: 14.1928,
+    lng: 120.8762,
+    waitMinutes: 18,
+    reportsToday: 14,
+    lastReportMinutesAgo: 3,
+  },
 ];
 
 export const places: Place[] = [
