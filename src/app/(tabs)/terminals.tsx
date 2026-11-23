@@ -9,6 +9,7 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { ScreenHeader } from '@/components/screen-header';
 import { formatClock, terminals, type Terminal } from '@/data/indang';
+import { useLive, type QueueLevel } from '@/data/live';
 import { colors, radii, spacing, touch, type } from '@/theme';
 
 type ViewMode = 'list' | 'map';
@@ -48,9 +49,9 @@ function isOpen(terminal: Terminal, now: Date): boolean {
   return minutes >= minutesOf(hours.opensAt) && minutes <= minutesOf(hours.closesAt);
 }
 
-function congestionOf(waitMinutes: number): Congestion {
-  if (waitMinutes < 10) return 'light';
-  if (waitMinutes <= 20) return 'moderate';
+function congestionOfQueue(queueLevel: QueueLevel): Congestion {
+  if (queueLevel === 'none' || queueLevel === '1-5') return 'light';
+  if (queueLevel === '6-15') return 'moderate';
   return 'heavy';
 }
 
@@ -104,6 +105,14 @@ function CongestionPill({ congestion }: { congestion: Congestion }) {
 }
 
 function TerminalCard({ terminal, open }: { terminal: Terminal; open: boolean }) {
+  const { getTerminalStatus } = useLive();
+  const status = getTerminalStatus(terminal.id);
+  const waitMinutes = status?.waitMinutes ?? terminal.waitMinutes;
+  const reportsToday = status?.reportsToday ?? terminal.reportsToday;
+  const minutesAgo = status?.minutesAgo ?? terminal.lastReportMinutesAgo;
+  const isStale = status?.isStale ?? false;
+  const reportedText = minutesAgo === 0 ? 'just now' : `${minutesAgo} min ago`;
+
   return (
     <Card style={!open && styles.cardClosed}>
       <View style={styles.cardTop}>
@@ -126,11 +135,17 @@ function TerminalCard({ terminal, open }: { terminal: Terminal; open: boolean })
         </Text>
       </View>
       <View style={styles.waitRow}>
-        <Text style={styles.wait}>{open ? `~${terminal.waitMinutes} min wait` : '—'}</Text>
-        <CongestionPill congestion={congestionOf(terminal.waitMinutes)} />
+        <Text style={[styles.wait, isStale && styles.dimmed]}>
+          {open ? `~${waitMinutes} min wait` : '—'}
+        </Text>
+        {isStale ? (
+          <Text style={styles.noReport}>No recent report</Text>
+        ) : (
+          <CongestionPill congestion={congestionOfQueue(status?.queueLevel ?? 'none')} />
+        )}
       </View>
       <Text style={styles.reported}>
-        {`Reported ${terminal.lastReportMinutesAgo} min ago · ${terminal.reportsToday} reports today`}
+        {`Reported ${reportedText} · ${reportsToday} reports today`}
       </Text>
       <Button
         label="Report wait time"
@@ -207,6 +222,7 @@ function TerminalMap({
   onSelect: (id: string) => void;
 }) {
   const [width, setWidth] = useState(0);
+  const { getTerminalStatus } = useLive();
   const pins = useMemo(() => (width > 0 ? layoutPins(width) : []), [width]);
   const labels = useMemo(() => (width > 0 ? placeLabels(pins, width) : []), [pins, width]);
 
@@ -230,9 +246,13 @@ function TerminalMap({
             ))}
             {pins.map((pin) => {
               const open = isOpen(pin.terminal, now);
-              const color = open
-                ? CONGESTION_META[congestionOf(pin.terminal.waitMinutes)].color
-                : colors.muted;
+              const status = getTerminalStatus(pin.terminal.id);
+              const color =
+                !open || status?.isStale
+                  ? colors.muted
+                  : CONGESTION_META[
+                      congestionOfQueue(status?.queueLevel ?? 'none')
+                    ].color;
               const selected = pin.terminal.id === selectedId;
               return (
                 <G key={pin.terminal.id}>
@@ -463,6 +483,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.sm,
+  },
+  dimmed: {
+    opacity: 0.5,
+  },
+  noReport: {
+    color: colors.muted,
+    fontSize: type.size.xs,
+    lineHeight: type.line.xs,
   },
   congestionText: {
     color: colors.onTransit,

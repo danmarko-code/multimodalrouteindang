@@ -8,10 +8,22 @@ import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { ScreenHeader } from '@/components/screen-header';
 import { terminals, type Terminal } from '@/data/indang';
+import { useLive, type QueueLevel } from '@/data/live';
 import { colors, radii, spacing, touch, type } from '@/theme';
 
-const QUEUE_OPTIONS = ['No queue', '1 to 5', '6 to 15', '16 or more'];
-const WAIT_OPTIONS = ['Under 5 min', '5 to 10 min', '10 to 20 min', '20 to 30 min', 'over 30 min'];
+const QUEUE_OPTIONS: { label: string; value: QueueLevel }[] = [
+  { label: 'No queue', value: 'none' },
+  { label: '1 to 5', value: '1-5' },
+  { label: '6 to 15', value: '6-15' },
+  { label: '16 or more', value: '16+' },
+];
+const WAIT_OPTIONS: { label: string; value: number }[] = [
+  { label: 'Under 5 min', value: 2 },
+  { label: '5 to 10 min', value: 8 },
+  { label: '10 to 20 min', value: 15 },
+  { label: '20 to 30 min', value: 25 },
+  { label: 'over 30 min', value: 35 },
+];
 
 function displayName(name: string): string {
   return name.replace('Poblacion', 'Indang Bayan');
@@ -70,8 +82,9 @@ function LocationStatus({ terminal }: { terminal: Terminal }) {
 export default function ReportScreen() {
   const { terminalId } = useLocalSearchParams<{ terminalId?: string }>();
   const terminal = terminals.find((item) => item.id === terminalId);
-  const [queue, setQueue] = useState<string | null>(null);
-  const [wait, setWait] = useState<string | null>(null);
+  const { submitReport } = useLive();
+  const [queue, setQueue] = useState<(typeof QUEUE_OPTIONS)[number] | null>(null);
+  const [wait, setWait] = useState<(typeof WAIT_OPTIONS)[number] | null>(null);
   const [summary, setSummary] = useState<{ queue: string; wait: string } | null>(null);
 
   const goBack = () => {
@@ -103,7 +116,8 @@ export default function ReportScreen() {
 
   const submit = () => {
     if (queue === null || wait === null || tooFar) return;
-    setSummary({ queue, wait });
+    submitReport(terminal.id, queue.value, wait.value);
+    setSummary({ queue: queue.label, wait: wait.label });
   };
 
   return (
@@ -153,9 +167,9 @@ export default function ReportScreen() {
               <View style={styles.chipRow}>
                 {QUEUE_OPTIONS.map((option) => (
                   <ChoiceChip
-                    key={option}
-                    label={option}
-                    selected={queue === option}
+                    key={option.label}
+                    label={option.label}
+                    selected={queue?.value === option.value}
                     onPress={() => setQueue(option)}
                   />
                 ))}
@@ -167,9 +181,9 @@ export default function ReportScreen() {
               <View style={styles.chipRow}>
                 {WAIT_OPTIONS.map((option) => (
                   <ChoiceChip
-                    key={option}
-                    label={option}
-                    selected={wait === option}
+                    key={option.label}
+                    label={option.label}
+                    selected={wait?.value === option.value}
                     onPress={() => setWait(option)}
                   />
                 ))}
