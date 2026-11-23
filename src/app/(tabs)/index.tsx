@@ -2,8 +2,8 @@ import DateTimePicker, {
   type DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/button';
 import { Card } from '@/components/card';
 import { ScreenHeader } from '@/components/screen-header';
@@ -48,9 +48,11 @@ export default function SearchScreen() {
   const [destination, setDestination] = useState<string>('CvSU Main Gate');
   const [departure, setDeparture] = useState<'now' | 'at'>('now');
   const [departTime, setDepartTime] = useState(() => roundUpToFive(new Date()));
-  const [fromOpen, setFromOpen] = useState(false);
-  const [toOpen, setToOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [dropdown, setDropdown] = useState<{ kind: 'from' | 'to'; top: number; left: number; width: number } | null>(null);
+
+  const fromRef = useRef<any>(null);
+  const toRef = useRef<any>(null);
 
   const openPicker = () => setPickerOpen(true);
 
@@ -64,39 +66,31 @@ export default function SearchScreen() {
   };
 
   const openFrom = () => {
-    setFromOpen(true);
-    setToOpen(false);
-  };
-
-  const openTo = () => {
-    setToOpen(true);
-    setFromOpen(false);
-  };
-
-  const toggleFrom = () => {
-    if (fromOpen) {
-      setFromOpen(false);
-    } else {
-      openFrom();
+    const el = fromRef.current;
+    if (el) {
+      el.measureInWindow((x: number, y: number, width: number, height: number) => {
+        setDropdown({ kind: 'from', top: y + height + 4, left: x, width });
+      });
     }
   };
 
-  const toggleTo = () => {
-    if (toOpen) {
-      setToOpen(false);
-    } else {
-      openTo();
+  const openTo = () => {
+    const el = toRef.current;
+    if (el) {
+      el.measureInWindow((x: number, y: number, width: number, height: number) => {
+        setDropdown({ kind: 'to', top: y + height + 4, left: x, width });
+      });
     }
   };
 
   const selectOrigin = (place: string) => {
     setOrigin(place);
-    setFromOpen(false);
+    setDropdown(null);
   };
 
   const selectDestination = (place: string) => {
     setDestination(place);
-    setToOpen(false);
+    setDropdown(null);
   };
 
   const findRoutes = () => {
@@ -113,28 +107,142 @@ export default function SearchScreen() {
     });
   };
 
-  return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled">
-      <ScreenHeader title="Search" />
+  const fromOpen = dropdown?.kind === 'from';
+  const toOpen = dropdown?.kind === 'to';
 
-      <Card style={styles.card}>
-        <Text style={styles.label}>From</Text>
-        <View style={styles.selectContainer}>
+  return (
+    <>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled">
+        <ScreenHeader title="Search" />
+
+        <Card style={styles.card}>
+          <Text style={styles.label}>From</Text>
           <Pressable
-            onPress={toggleFrom}
+            ref={fromRef}
+            onPress={openFrom}
             accessibilityRole="button"
             accessibilityState={{ expanded: fromOpen }}
             accessibilityLabel={`Origin, ${origin}. Change origin`}
             style={({ pressed }) => [styles.input, styles.selectField, pressed && styles.pressed]}>
             <Text style={styles.selectValue}>{origin}</Text>
-            <Text style={styles.selectGlyph}>{fromOpen ? '▸' : '▾'}</Text>
+            <Text style={styles.selectGlyph}>{fromOpen ? '▴' : '▾'}</Text>
           </Pressable>
-          {fromOpen && (
-            <View style={styles.menu}>
-              {ORIGINS.map((place) => {
+
+          <Text style={[styles.label, styles.labelSpaced]}>To</Text>
+          <Pressable
+            ref={toRef}
+            onPress={openTo}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: toOpen }}
+            accessibilityLabel={`Destination, ${destination}. Change destination`}
+            style={({ pressed }) => [styles.input, styles.selectField, pressed && styles.pressed]}>
+            <Text style={styles.selectValue}>{destination}</Text>
+            <Text style={styles.selectGlyph}>{toOpen ? '▴' : '▾'}</Text>
+          </Pressable>
+        </Card>
+
+        <Card style={styles.card}>
+          <Text style={styles.label}>Departure</Text>
+          <View style={styles.segment}>
+            {(['now', 'at'] as const).map((option) => {
+              const active = departure === option;
+              return (
+                <Pressable
+                  key={option}
+                  onPress={() => {
+                    setDeparture(option);
+                    if (option === 'now') setPickerOpen(false);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  style={[styles.segmentItem, active && styles.segmentItemActive]}>
+                  <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                    {option === 'now' ? 'Leave now' : 'Depart at'}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {departure === 'at' ? (
+            <>
+              <Pressable
+                onPress={openPicker}
+                accessibilityRole="button"
+                accessibilityLabel={`Departure time, ${formatTime(departTime)}. Change time`}
+                style={({ pressed }) => [
+                  styles.input,
+                  styles.timeField,
+                  pressed && styles.pressed,
+                ]}>
+                <Text style={styles.timeValue}>{formatTime(departTime)}</Text>
+                <Text style={styles.timeGlyph}>▾</Text>
+              </Pressable>
+
+              {pickerOpen ? (
+                <View style={styles.pickerWrap}>
+                  <DateTimePicker
+                    value={departTime}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    is24Hour={false}
+                    onChange={onPickTime}
+                  />
+                  {Platform.OS === 'ios' ? (
+                    <Pressable
+                      onPress={() => setPickerOpen(false)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Confirm departure time"
+                      style={({ pressed }) => [styles.pickerDone, pressed && styles.pressed]}>
+                      <Text style={styles.pickerDoneText}>Done</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+
+              <View style={styles.timeChips}>
+                {TIME_CHIPS.map((chip) => (
+                  <Pressable
+                    key={chip.label}
+                    onPress={() => applyChip(chip)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Set departure time to ${chip.label}`}
+                    style={({ pressed }) => [styles.timeChip, pressed && styles.pressed]}>
+                    <Text style={styles.timeChipText}>{chip.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          ) : null}
+
+          <Text style={styles.period}>
+            {getPeriod(departure === 'now' ? new Date() : departTime) === 'day'
+              ? 'Day fare applies'
+              : 'Night fare applies (9:00 PM to 4:00 AM)'}
+          </Text>
+        </Card>
+
+        <View style={styles.actions}>
+          <Button label="Find routes" onPress={findRoutes} />
+        </View>
+      </ScrollView>
+
+      {dropdown && (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={() => setDropdown(null)}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setDropdown(null)} />
+          <View style={[
+            styles.modalList,
+            { top: dropdown.top, left: dropdown.left, width: dropdown.width },
+          ]}>
+            {dropdown.kind === 'from' ? (
+              ORIGINS.map((place) => {
                 const active = origin === place;
                 return (
                   <Pressable
@@ -142,9 +250,11 @@ export default function SearchScreen() {
                     onPress={() => selectOrigin(place)}
                     accessibilityRole="button"
                     accessibilityState={{ selected: active }}
-                    style={[styles.menuItem, active && styles.menuItemSelected]}>
-                    <View style={styles.menuItemRow}>
-                      <Text style={[styles.menuText, active && styles.menuTextSelected]}>{place}</Text>
+                    style={[styles.modalItem, active && styles.modalItemSelected]}>
+                    <View style={styles.modalItemRow}>
+                      <Text style={[styles.modalItemText, active && styles.modalItemTextSelected]}>
+                        {place}
+                      </Text>
                       {active && <Text style={styles.checkIcon}>✓</Text>}
                     </View>
                     {place === 'Current location' && !active && (
@@ -152,25 +262,9 @@ export default function SearchScreen() {
                     )}
                   </Pressable>
                 );
-              })}
-            </View>
-          )}
-        </View>
-
-        <Text style={[styles.label, styles.labelSpaced]}>To</Text>
-        <View style={styles.selectContainer}>
-          <Pressable
-            onPress={toggleTo}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: toOpen }}
-            accessibilityLabel={`Destination, ${destination}. Change destination`}
-            style={({ pressed }) => [styles.input, styles.selectField, pressed && styles.pressed]}>
-            <Text style={styles.selectValue}>{destination}</Text>
-            <Text style={styles.selectGlyph}>{toOpen ? '▸' : '▾'}</Text>
-          </Pressable>
-          {toOpen && (
-            <View style={styles.menu}>
-              {DESTINATIONS.map((place) => {
+              })
+            ) : (
+              DESTINATIONS.map((place) => {
                 const active = destination === place;
                 return (
                   <Pressable
@@ -178,103 +272,21 @@ export default function SearchScreen() {
                     onPress={() => selectDestination(place)}
                     accessibilityRole="button"
                     accessibilityState={{ selected: active }}
-                    style={[styles.menuItem, active && styles.menuItemSelected]}>
-                    <View style={styles.menuItemRow}>
-                      <Text style={[styles.menuText, active && styles.menuTextSelected]}>{place}</Text>
+                    style={[styles.modalItem, active && styles.modalItemSelected]}>
+                    <View style={styles.modalItemRow}>
+                      <Text style={[styles.modalItemText, active && styles.modalItemTextSelected]}>
+                        {place}
+                      </Text>
                       {active && <Text style={styles.checkIcon}>✓</Text>}
                     </View>
                   </Pressable>
                 );
-              })}
-            </View>
-          )}
-        </View>
-      </Card>
-
-      <Card style={styles.card}>
-        <Text style={styles.label}>Departure</Text>
-        <View style={styles.segment}>
-          {(['now', 'at'] as const).map((option) => {
-            const active = departure === option;
-            return (
-              <Pressable
-                key={option}
-                onPress={() => {
-                  setDeparture(option);
-                  if (option === 'now') setPickerOpen(false);
-                }}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                style={[styles.segmentItem, active && styles.segmentItemActive]}>
-                <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                  {option === 'now' ? 'Leave now' : 'Depart at'}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        {departure === 'at' ? (
-          <>
-            <Pressable
-              onPress={openPicker}
-              accessibilityRole="button"
-              accessibilityLabel={`Departure time, ${formatTime(departTime)}. Change time`}
-              style={({ pressed }) => [
-                styles.input,
-                styles.timeField,
-                pressed && styles.pressed,
-              ]}>
-              <Text style={styles.timeValue}>{formatTime(departTime)}</Text>
-              <Text style={styles.timeGlyph}>▾</Text>
-            </Pressable>
-
-            {pickerOpen ? (
-              <View style={styles.pickerWrap}>
-                <DateTimePicker
-                  value={departTime}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  is24Hour={false}
-                  onChange={onPickTime}
-                />
-                {Platform.OS === 'ios' ? (
-                  <Pressable
-                    onPress={() => setPickerOpen(false)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Confirm departure time"
-                    style={({ pressed }) => [styles.pickerDone, pressed && styles.pressed]}>
-                    <Text style={styles.pickerDoneText}>Done</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : null}
-
-            <View style={styles.timeChips}>
-              {TIME_CHIPS.map((chip) => (
-                <Pressable
-                  key={chip.label}
-                  onPress={() => applyChip(chip)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Set departure time to ${chip.label}`}
-                  style={({ pressed }) => [styles.timeChip, pressed && styles.pressed]}>
-                  <Text style={styles.timeChipText}>{chip.label}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </>
-        ) : null}
-
-        <Text style={styles.period}>
-          {getPeriod(departure === 'now' ? new Date() : departTime) === 'day'
-            ? 'Day fare applies'
-            : 'Night fare applies (9:00 PM to 4:00 AM)'}
-        </Text>
-      </Card>
-
-      <View style={styles.actions}>
-        <Button label="Find routes" onPress={findRoutes} />
-      </View>
-    </ScrollView>
+              })
+            )}
+          </View>
+        </Modal>
+      )}
+    </>
   );
 }
 
@@ -399,7 +411,6 @@ const styles = StyleSheet.create({
   actions: {
     marginHorizontal: spacing.lg,
   },
-  selectContainer: {},
   selectField: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -415,36 +426,48 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: type.size.md,
   },
-  menu: {
-    marginTop: spacing.xs,
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+  },
+  modalList: {
+    position: 'absolute',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
     borderRadius: radii.sm,
-    backgroundColor: colors.paper,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
   },
-  menuItem: {
-    minHeight: 44,
+  modalItem: {
+    height: 44,
     paddingHorizontal: spacing.md,
-    justifyContent: 'center',
     flexDirection: 'row',
     alignItems: 'center',
   },
-  menuItemRow: {
+  modalItemRow: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  menuItemSelected: {
+  modalItemSelected: {
     backgroundColor: 'rgba(34, 197, 94, 0.12)',
   },
-  menuText: {
+  modalItemText: {
     color: colors.ink,
     fontSize: type.size.md,
     flex: 1,
   },
-  menuTextSelected: {
+  modalItemTextSelected: {
     color: '#15803d',
     fontWeight: type.weight.semibold,
   },
